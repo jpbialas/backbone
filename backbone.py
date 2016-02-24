@@ -45,28 +45,29 @@ def layervalues(input, layer, alpha):
 	results={}
 
 	for filename in os.listdir(input):
-		fents=filename.split('-')
-		sents=fents[1].split('.')
-		object=sents[0]
-		actualfile=os.path.join(input,filename)
-		segment=io.imread(actualfile)
-		shape=numpy.shape(segment)
-		pixcount=0
-		pixtotal=0
-		i=0
-		while i<shape[0]:
-			j=0
-			while j<shape[1]:
-				if segment[i,j,alpha]==255:
-					pixcount+=1
-					pixtotal+=segment[i,j,layer]
-				j+=1
-			i+=1
-		if pixcount>0:
-			average=pixtotal/pixcount
-		else:
-			average=0
-		results[int(object)]=average
+                if filename[-3:] == 'tif':                        
+                        fents=filename.split('-')
+                        sents=fents[1].split('.')
+                        object=sents[0]
+                        actualfile=os.path.join(input,filename)
+                        segment=io.imread(actualfile)
+                        shape=numpy.shape(segment)
+                        pixcount=0
+                        pixtotal=0
+                        i=0
+                        while i<shape[0]:
+                                j=0
+                                while j<shape[1]:
+                                        if segment[i,j,alpha]==255:
+                                                pixcount+=1
+                                                pixtotal+=segment[i,j,layer]
+                                        j+=1
+                                i+=1
+                        if pixcount>0:
+                                average=pixtotal/pixcount
+                        else:
+                                average=0
+                        results[int(object)]=average
 	return(results)
 
 def haralickvalues(input):
@@ -88,8 +89,6 @@ def haralickvalues(input):
 	return(results)
 
 
-
-
 def labelsegs(segments,labels,overlap):
 	from osgeo import ogr,gdal
 	import os
@@ -101,6 +100,9 @@ def labelsegs(segments,labels,overlap):
 	#load the segmentation layer
 	val_dataSource=driver.Open(segments,0)
 	val_layer=val_dataSource.GetLayer()
+        val_defn =val_layer.GetLayerDefn()
+        for i in range(val_defn.GetFieldCount()):
+                print val_defn.GetFieldDefn(i).GetName()
 
 	count=1
 	for feature in val_layer:
@@ -111,8 +113,11 @@ def labelsegs(segments,labels,overlap):
 		#load the label data
 		lab_dataSource=driver.Open(labels,0)
 		lab_layer=lab_dataSource.GetLayer()
-
+                # lab_defn =lab_layer.GetLayerDefn()
+                # for i in range(lab_defn.GetFieldCount()):
+                #         print lab_defn.GetFieldDefn(i).GetName()
 		for lab_feature in lab_layer:
+                        # print lab_feature.GetField("Classvalue")
 			#get geometry for label
 			lab_geom=lab_feature.GetGeometryRef()
 
@@ -122,7 +127,7 @@ def labelsegs(segments,labels,overlap):
 
 			if intersect_area>overlap*val_area:
 				string= "segment %d" % (count)
-				labeledsegments.append(count)
+				labeledsegments.append((count, lab_feature.GetField("Classvalue")))
 		count=count+1
 	return labeledsegments
 
@@ -166,9 +171,22 @@ def getsegs(segments, raster, output):
 
 	for i in range(layerDefinition.GetFieldCount()):
 		#find the field we created
-		if layerDefinition.GetFieldDefn(i).GetName()=="forsegs":
+		if layerDefinition.GetFieldDefn(i).GetName()[:7]=="forsegs":
 			#and delete it
 			val_layer.DeleteField(i)
-
 	#write out the shapefile
 	val_dataSource=None
+
+def make_cv_segments(data, k):
+        import numpy as np
+        res = []
+        temp = data
+        np.random.shuffle(data)
+        size = int(len(data) / k)
+        for i in range(k - 1):
+                fold = data[i * size : (i+1) * size]
+                res.append(fold[:, 0], fold[:, 1])
+        last = data[(k - 1) * size : ]
+        res.append(last[:, 0], last[:, 1])
+        return res
+        
