@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import cv2
 import skimage.feature as feat
 
-def edge_density(img, ksize, downsample = 0, amp = 1):
+def edge_density(img, ksize, amp = 1):
 	new_img = img.copy()
-	for i in range(downsample):
-		new_img = cv2.pyrDown(new_img)
 
 	edges = cv2.Canny(img,50,100)
 	density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)

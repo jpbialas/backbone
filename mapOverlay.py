@@ -165,7 +165,6 @@ class MapOverlay:
 		miny = max(0, miny)
 		maxx = min(maxx, self.cols)
 		maxy = min(maxy, self.rows)
-		print(lat_min, lat_max)
 
 		xres=(lat_max-lat_min)/float(maxx-minx)
 		yres=(lon_max-lon_min)/float(maxy-miny)
