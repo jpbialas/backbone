@@ -41,7 +41,7 @@ class MapOverlay:
 
 	'''
 	OUTPUT: 
-		- img: (n*m x 3 np array) Raveled image associated with map_fn
+		- img: (n*m x 3 ndarray) Raveled image associated with map_fn
 	'''
 	def getMapData(self):
 		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
@@ -52,7 +52,7 @@ class MapOverlay:
 
 	'''
 	OUTPUT:
-		- (n x m x 3 np array) RGB image associated with map_fn
+		- (n x m x 3 ndarray) RGB image associated with map_fn
 	'''
 	def getMap(self):
 		return cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
@@ -62,7 +62,7 @@ class MapOverlay:
 	INPUT: 
 		- mask_name: (string) Name of mask to get labels for
 	OUTPUT: 
-		- (n x 1 np array) Vector of binary labels indicating which pixels lie within mask
+		- (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
 	'''
 	def getLabels(self, mask_name):
 		return self.masks[mask_name].ravel()

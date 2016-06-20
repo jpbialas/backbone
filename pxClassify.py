@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 
 '''For each of the following Models:
 Input: 
-	- X: (n x m np array) n  m-dimensional vectors representing data to be learned
-	- y: (n x 1 np array) contains labels for X
+	- X: (n x m ndarray) n  m-dimensional vectors representing data to be learned
+	- y: (n x 1 ndarray) contains labels for X
 Output:
 	- sklearn model fit to input data
 '''
@@ -33,9 +33,10 @@ def NB(X, y):
 
 '''
 INPUT: 
-	- labels:   (1-D np array) array containing binary labels
-	- nsamples: (int) total number of indices to be sampled (If odd, produces list of length (nsamples-1))
-	- [used]:   (1-D np array) containing indices not to include in sampling
+	- labels:   (nx1 ndarray) Array containing binary labels
+	- nsamples: (int) Value representingtotal number of indices to be sampled 
+					NOTE: (If odd, produces list of length (nsamples-1))
+	- [used]:   (sx1 ndarray) Array containing indices not to include in sampling
 OUTPUT:
 	- Returns random list of indices from labels such that nsamples/2 of the indices have value 1 and 
 		nsamples/2 indices have value 0
@@ -58,7 +59,7 @@ def sample(labels, nsamples, used = None):
 
 '''
 INPUT:
-	- confusion_matrix: (2x2 np array) Confusion matrix of shape: (actual values) x (predicted values)
+	- confusion_matrix: (2x2 ndarray) Confusion matrix of shape: (actual values) x (predicted values)
 OUTPUT:
 	- (tuple) A Tuple containing the precision and recall of the confusion matrix
 
@@ -114,7 +115,7 @@ INPUT:
 	-fn: 		 (string) Filename of .tiff file containing map
 	-mask_fn: 	 (string) Filename of .shp file outlining labelled data
 	-name: 		 (string) Name associated with labeled data
-	-model: 	 ((n x m np array) -> (n x 1 np array) -> sklearn model) Function that takes data and 
+	-model: 	 ((n x m ndarray) -> (n x 1 ndarray) -> sklearn model) Function that takes data and 
 						labels as input and produces trained model
 	-frac_train: (float) Fraction of total image to train data on
 	-frac_test:  (float) Fraction of total image to test data on
@@ -123,7 +124,7 @@ OUTPUT:
 		- (float) precision
 		- (float) recall
 		- (sklearn model) Trained sklearn model
-		- (np array) Data collected from .tiff file
+		- (ndarray) Data collected from .tiff file
 '''
 def main(fn, mask_fn, name, model, frac_train, frac_test):
 	myMap = MapOverlay(fn)
