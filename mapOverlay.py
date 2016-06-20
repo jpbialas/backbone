@@ -190,19 +190,3 @@ class MapOverlay:
 
 		self.masks[mask_name] = mask
 		
-
-
-'''
-if __name__ == "__main__":
-	myMap = MapOverlay('jpl-data/clipped-image.tif')
-	print(myMap.originX, myMap.originY)
-	print(myMap.cols, myMap.rows)
-	myMap.newMask('jpl-data/training-building.shp', 'buildings')
-	myMap.newMask('jpl-data/training-damage.shp','damage')
-	#myMap.maskImg('buildings')
-	myMap.maskImg('damage')
-	myMap.getMapData()
-	
-	myMap2 = MapOverlay('jpl-data/NE1_LR_LC_SR_W_DR.tif')
-	myMap2.newMask('jpl-data/ocean.shp','oceans')
-	myMap2.maskImg('oceans')'''
