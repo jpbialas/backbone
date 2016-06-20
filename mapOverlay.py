@@ -1,0 +1,206 @@
+import matplotlib.pyplot as plt
+import cv2
+import numpy as np
+from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr #For shapefile
+import os
+from osgeo import gdal, gdalconst #For Raster
+
+class MapOverlay:
+
+
+	'''
+	INPUT: filename of map to be used as the base geographic raster for the object
+	RESULT: Instantiates object with stored constants applicable to input map
+	'''
+	def __init__(self, map_fn):
+		self.masks = {}
+
+		driver = gdal.GetDriverByName('HFA')
+		driver.Register()
+		ds = gdal.Open(map_fn, 0)
+		if ds is None:
+			print 'Could not open ' + map_fn
+			sys.exit(1)
+
+		self.map_ds = ds
+		geotransform = ds.GetGeoTransform()
+
+		self.map_fn = map_fn
+
+		self.cols = ds.RasterXSize
+		self.rows = ds.RasterYSize
+		self.bands = ds.RasterCount
+
+		self.originX = geotransform[0]
+		self.originY = geotransform[3]
+		self.pixelWidth = geotransform[1]
+		self.pixelHeight = geotransform[5]
+
+	def getMapData(self):
+		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
+		h,w,c = img.shape
+		img = img.reshape(h*w, c)
+		return img
+
+	'''
+	INPUT: Name of mask to get labels for
+	RETURNS: vector of binary labels indicating which pixels lie within mask
+	'''
+	def getLabels(self, mask_name):
+		return self.masks[mask_name].ravel()
+
+	'''
+	INPUT: Lattitude and Longitude Coordinates
+	RETURNS: X and Y coordinates of pixel at that Lat/Lon
+	'''
+	def latlonToPx(self, x, y):
+		xOffset = int((x - self.originX) / self.pixelWidth)
+		yOffset = int((y - self.originY) / self.pixelHeight)
+		return (xOffset, yOffset)
+
+	'''
+	INPUT: 
+		-shape_fn: Shape filename to be reprojected
+		-mask_name: Custom name to associate with newly projected shape file
+	RETURNS: New Shapefile with coordinates related to base map raster
+
+	heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
+
+	'''
+	def _projectShape(self, shape_fn, mask_name):
+		driver = ogr.GetDriverByName('ESRI Shapefile')
+		in_ds = driver.Open(shape_fn, 0) #Second parameter makes it read only. Other option is 1
+		if in_ds is None:
+		  print 'Could not open file'
+		  sys.exit(1)
+		in_lyr = in_ds.GetLayer()
+
+
+		targetSR = osr.SpatialReference()
+		targetSR.ImportFromWkt(self.map_ds.GetProjectionRef())
+
+		coordTrans = osr.CoordinateTransformation(in_lyr.GetSpatialRef(), targetSR)
+
+		outfile = 'cache\{}.shp'.format(mask_name)
+		outDataSet = driver.CreateDataSource(outfile)
+
+		dest_srs = osr.SpatialReference()
+		dest_srs.ImportFromEPSG(4326)
+		outLayer = outDataSet.CreateLayer(mask_name, targetSR, geom_type=ogr.wkbMultiPolygon)
+
+
+		inLayerDefn = in_lyr.GetLayerDefn()
+		for i in range(0, inLayerDefn.GetFieldCount()):
+			fieldDefn = inLayerDefn.GetFieldDefn(i)
+			outLayer.CreateField(fieldDefn)
+
+		outLayerDefn = outLayer.GetLayerDefn()
+
+		inFeature = in_lyr.GetNextFeature()
+		while inFeature:
+		    # get the input geometry
+		    geom = inFeature.GetGeometryRef()
+		    # reproject the geometry
+		    geom.Transform(coordTrans)
+		    # create a new feature
+		    outFeature = ogr.Feature(outLayerDefn)
+		    # set the geometry and attribute
+		    outFeature.SetGeometry(geom)
+		    for i in range(0, outLayerDefn.GetFieldCount()):
+		        outFeature.SetField(outLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
+		    # add the feature to the shapefile
+		    outLayer.CreateFeature(outFeature)
+		    # destroy the features and get the next input feature
+		    outFeature.Destroy()
+		    inFeature.Destroy()
+		    inFeature = in_lyr.GetNextFeature()
+
+		return outDataSet
+
+
+	'''
+	INPUT: Name of mask to overlay
+	RESULT: Displays base map overlayed with relevant mask shapes
+	'''
+	def maskImg(self, mask_name):
+		mask = self.masks[mask_name]
+		h,w = mask.shape
+		adj_mask = np.logical_not(mask).reshape(h,w,1)
+
+		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
+		
+		img = img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
+		plt.imshow(img)
+		plt.show()
+
+
+	''' 
+	INPUT: 
+		-shape_fn: Shape filename to be reprojected
+		-mask_name: Custom name to associate with newly projected shape file
+	RETURNS: Generates mask with the dimensions of the base map raster containing '1's in pixels
+			 Where the shapes cover and '0' in all other locations.
+			 Additionally adds the mask to the map dictionary
+	'''
+	def newMask(self, shape_fn, mask_name):
+		dataSource =  self._projectShape(shape_fn, mask_name)
+
+		if dataSource is None:
+		  print 'Could not open file'
+		  sys.exit(1)
+
+		layer = dataSource.GetLayer()
+		feature = layer.GetNextFeature()
+
+		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+		maxx, miny = self.latlonToPx(lat_min,lon_max)
+		minx, maxy = self.latlonToPx(lat_max,lon_min)
+		nrows = min(maxy-miny, self.rows)
+		ncols = min(maxx-minx, self.cols)
+		minx = max(0, minx)
+		miny = max(0, miny)
+		maxx = min(maxx, self.cols)
+		maxy = min(maxy, self.rows)
+		print(lat_min, lat_max)
+
+		xres=(lat_max-lat_min)/float(maxx-minx)
+		yres=(lon_max-lon_min)/float(maxy-miny)
+
+		geotransform=(lat_min,xres,0,lon_max,0, -yres)
+
+		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
+		dst_ds.SetGeoTransform(geotransform)
+
+		band = dst_ds.GetRasterBand(1) #Initialize with 1 band
+		band.Fill(0) #initialise raster with zeros
+		band.SetNoDataValue(0)
+		band.FlushCache()
+
+		gdal.RasterizeLayer(dst_ds, [1], layer, options = ["ATTRIBUTE=ID"])
+		
+
+		mask = dst_ds.GetRasterBand(1).ReadAsArray()
+		mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+		mask = np.fliplr(mask)
+		mask = mask>0
+
+		self.masks[mask_name] = mask
+		
+
+
+'''
+if __name__ == "__main__":
+	myMap = MapOverlay('jpl-data/clipped-image.tif')
+	print(myMap.originX, myMap.originY)
+	print(myMap.cols, myMap.rows)
+	myMap.newMask('jpl-data/training-building.shp', 'buildings')
+	myMap.newMask('jpl-data/training-damage.shp','damage')
+	#myMap.maskImg('buildings')
+	myMap.maskImg('damage')
+	myMap.getMapData()
+	
+	myMap2 = MapOverlay('jpl-data/NE1_LR_LC_SR_W_DR.tif')
+	myMap2.newMask('jpl-data/ocean.shp','oceans')
+	myMap2.maskImg('oceans')'''
