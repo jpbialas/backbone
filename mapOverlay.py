@@ -9,10 +9,11 @@ from osgeo import gdal, gdalconst #For Raster
 
 class MapOverlay:
 
-
 	'''
-	INPUT: filename of map to be used as the base geographic raster for the object
-	RESULT: Instantiates object with stored constants applicable to input map
+	INPUT: 
+		- map_fn: (string) Filename of map to be used as the base geographic raster for the object
+	RESULT: 
+		- Instantiates object with stored constants applicable to input map
 	'''
 	def __init__(self, map_fn):
 		self.masks = {}
@@ -38,24 +39,41 @@ class MapOverlay:
 		self.pixelWidth = geotransform[1]
 		self.pixelHeight = geotransform[5]
 
+	'''
+	OUTPUT: 
+		- img: (n*m x 3 np array) Raveled image associated with map_fn
+	'''
 	def getMapData(self):
 		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
 		h,w,c = img.shape
 		img = img.reshape(h*w, c)
 		return img
 
+
+	'''
+	OUTPUT:
+		- (n x m x 3 np array) RGB image associated with map_fn
+	'''
 	def getMap(self):
 		return cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
+
+	
 	'''
-	INPUT: Name of mask to get labels for
-	RETURNS: vector of binary labels indicating which pixels lie within mask
+	INPUT: 
+		- mask_name: (string) Name of mask to get labels for
+	OUTPUT: 
+		- (n x 1 np array) Vector of binary labels indicating which pixels lie within mask
 	'''
 	def getLabels(self, mask_name):
 		return self.masks[mask_name].ravel()
 
+
 	'''
-	INPUT: Lattitude and Longitude Coordinates
-	RETURNS: X and Y coordinates of pixel at that Lat/Lon
+	INPUT: 
+		- x: (float) Lattitude Coordinate
+		- y: (float) Longitude Coordinates
+	OUTPUT: 
+		Tuple containing x and y coordinates of point in image associated with lat/lon
 	'''
 	def latlonToPx(self, x, y):
 		xOffset = int((x - self.originX) / self.pixelWidth)
@@ -64,11 +82,12 @@ class MapOverlay:
 
 	'''
 	INPUT: 
-		-shape_fn: Shape filename to be reprojected
-		-mask_name: Custom name to associate with newly projected shape file
-	RETURNS: New Shapefile with coordinates related to base map raster
+		-shape_fn:  (string) Shape filename to be reprojected
+		-mask_name: (string) Custom name to associate with newly projected shape file
+	OUTPUT: 
+		- (DataSource object) New Shapefile with coordinates relative to base map raster
 
-	heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
+	NOTE: Second half of code heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
 
 	'''
 	def _projectShape(self, shape_fn, mask_name):
@@ -123,8 +142,10 @@ class MapOverlay:
 
 
 	'''
-	INPUT: Name of mask to overlay
-	RESULT: Displays base map overlayed with relevant mask shapes
+	INPUT: 
+		- (string) Name of mask to overlay
+	RESULT: 
+		- Displays base map overlayed with relevant mask shapes
 	'''
 	def maskImg(self, mask_name):
 		mask = self.masks[mask_name]
@@ -140,9 +161,9 @@ class MapOverlay:
 
 	''' 
 	INPUT: 
-		-shape_fn: Shape filename to be reprojected
-		-mask_name: Custom name to associate with newly projected shape file
-	RETURNS: Generates mask with the dimensions of the base map raster containing '1's in pixels
+		-shape_fn:  (string) Shape filename to be reprojected
+		-mask_name: (string )Custom name to associate with newly projected shape file
+	RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
 			 Where the shapes cover and '0' in all other locations.
 			 Additionally adds the mask to the map dictionary
 	'''
