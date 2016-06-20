@@ -44,6 +44,8 @@ class MapOverlay:
 		img = img.reshape(h*w, c)
 		return img
 
+	def getMap(self):
+		return cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
 	'''
 	INPUT: Name of mask to get labels for
 	RETURNS: vector of binary labels indicating which pixels lie within mask
