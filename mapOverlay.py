@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import cv2
+import sys
 import numpy as np
 from osgeo import gdal
 from osgeo import osr
@@ -178,6 +179,7 @@ class MapOverlay:
 		feature = layer.GetNextFeature()
 
 		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+
 		maxx, miny = self.latlonToPx(lat_min,lon_max)
 		minx, maxy = self.latlonToPx(lat_max,lon_min)
 		nrows = min(maxy-miny, self.rows)
@@ -191,7 +193,6 @@ class MapOverlay:
 		yres=(lon_max-lon_min)/float(maxy-miny)
 
 		geotransform=(lat_min,xres,0,lon_max,0, -yres)
-
 		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
 		dst_ds.SetGeoTransform(geotransform)
 
@@ -200,11 +201,12 @@ class MapOverlay:
 		band.SetNoDataValue(0)
 		band.FlushCache()
 
-		gdal.RasterizeLayer(dst_ds, [1], layer, options = ["ATTRIBUTE=ID"])
+		gdal.RasterizeLayer(dst_ds, [1], layer)#, options = ["ATTRIBUTE=ID"])
 		
 
 		mask = dst_ds.GetRasterBand(1).ReadAsArray()
 		mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+		
 		mask = np.fliplr(mask)
 		mask = mask>0
 

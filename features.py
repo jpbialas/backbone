@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import skimage.feature as feat
+from skimage.filters.rank import windowed_histogram
 
 '''
 INPUT:
@@ -26,7 +27,7 @@ OUTPUT:
 	- (n*m ndarray) Normalized data with 0 mean and standard normal variance
 '''
 def normalized(data):
-	return (data - np.mean(img))/np.std(data)
+	return (data - np.mean(data))/np.std(data)
 
 
 '''
@@ -38,7 +39,19 @@ INPUT:
 OUTPUT:
 	- (n*m x c ndarray) Ravelled image with gaussian blur applied
 '''
-def blurred(img, ksize = 21):
+def blurred(img, ksize = 101):
 	h,w,c = img.shape
-	return cv2.GaussianBlur(img,(21,21),0).reshape(h*w,c)
+	return cv2.GaussianBlur(img,(ksize,ksize),0).reshape(h*w,c)
 
+
+def hog(bw_img, ksize):
+	h,w = bw_img.shape
+	selem = np.ones((ksize, ksize)).astype('float')
+	gx = cv2.Sobel(bw_img, cv2.CV_32F, 1, 0)
+	gy = cv2.Sobel(bw_img, cv2.CV_32F, 0, 1)
+	mag, ang = cv2.cartToPolar(gx, gy)
+	angles = (ang).astype('float')/(2.0*np.pi)
+	hist = windowed_histogram(angles, selem, n_bins = 16)
+	return hist.reshape(h*w, 16)
+	#print(hist.shape)
+	#return np.std(hist, axis = 2).reshape(h*w,1)
