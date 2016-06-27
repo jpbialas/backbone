@@ -30,6 +30,8 @@ class MapOverlay:
 		geotransform = ds.GetGeoTransform()
 
 		self.map_fn = map_fn
+		self.img = cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB)
+		self.bw_img = cv2.imread(map_fn, 0)
 
 		self.cols = ds.RasterXSize
 		self.rows = ds.RasterYSize
@@ -40,58 +42,53 @@ class MapOverlay:
 		self.pixelWidth = geotransform[1]
 		self.pixelHeight = geotransform[5]
 
-	'''
-	OUTPUT: 
-		- img: (n*m x 3 ndarray) Raveled image associated with map_fn
-	'''
+	
 	def getMapData(self):
-		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
-		h,w,c = img.shape
-		img = img.reshape(h*w, c)
-		return img
-
-
-	'''
-	OUTPUT:
-		- (n x m x 3 ndarray) RGB image associated with map_fn
-	'''
-	def getMap(self):
-		return cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
+		'''
+		OUTPUT: 
+			- img: (n*m x 3 ndarray) Raveled image associated with map_fn
+		'''
+		h,w,c = self.img.shape
+		return self.img.reshape(h*w, c)
 
 	
-	'''
-	INPUT: 
-		- mask_name: (string) Name of mask to get labels for
-	OUTPUT: 
-		- (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
-	'''
+
+	
 	def getLabels(self, mask_name):
+		'''
+		INPUT: 
+			- mask_name: (string) Name of mask to get labels for
+		OUTPUT: 
+			- (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
+		'''
 		return self.masks[mask_name].ravel()
 
 
-	'''
-	INPUT: 
-		- x: (float) Lattitude Coordinate
-		- y: (float) Longitude Coordinates
-	OUTPUT: 
-		Tuple containing x and y coordinates of point in image associated with lat/lon
-	'''
+	
 	def latlonToPx(self, x, y):
+		'''
+		INPUT: 
+			- x: (float) Lattitude Coordinate
+			- y: (float) Longitude Coordinates
+		OUTPUT: 
+			Tuple containing x and y coordinates of point in image associated with lat/lon
+		'''
 		xOffset = int((x - self.originX) / self.pixelWidth)
 		yOffset = int((y - self.originY) / self.pixelHeight)
 		return (xOffset, yOffset)
 
-	'''
-	INPUT: 
-		-shape_fn:  (string) Shape filename to be reprojected
-		-mask_name: (string) Custom name to associate with newly projected shape file
-	OUTPUT: 
-		- (DataSource object) New Shapefile with coordinates relative to base map raster
-
-	NOTE: Second half of code heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
-
-	'''
+	
 	def _projectShape(self, shape_fn, mask_name):
+		'''
+		INPUT: 
+			-shape_fn:  (string) Shape filename to be reprojected
+			-mask_name: (string) Custom name to associate with newly projected shape file
+		OUTPUT: 
+			- (DataSource object) New Shapefile with coordinates relative to base map raster
+
+		NOTE: Second half of code heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
+
+		'''
 		driver = ogr.GetDriverByName('ESRI Shapefile')
 		in_ds = driver.Open(shape_fn, 0) #Second parameter makes it read only. Other option is 1
 		if in_ds is None:
@@ -142,33 +139,42 @@ class MapOverlay:
 		return outDataSet
 
 
-	'''
-	INPUT: 
-		- (string) Name of mask to overlay
-	RESULT: 
-		- Displays base map overlayed with relevant mask shapes
-	'''
 	def maskImg(self, mask_name):
+		'''
+		INPUT: 
+			- (string) Name of mask to overlay
+		RESULT: 
+			- Displays base map overlayed with relevant mask shapes
+		'''
 		mask = self.masks[mask_name]
 		h,w = mask.shape
 		adj_mask = np.logical_not(mask).reshape(h,w,1)
 
-		img = cv2.cvtColor(cv2.imread(self.map_fn), cv2.COLOR_BGR2RGB)
 		
-		img = img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
-		plt.imshow(img)
-		plt.show()
+		overlay = self.img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
+		return overlay
+
+	def newPxMask(self, mask, mask_name):
+		h,w,c = self.img.shape
+		self.masks[mask_name] = mask.reshape(h,w)
 
 
-	''' 
-	INPUT: 
-		-shape_fn:  (string) Shape filename to be reprojected
-		-mask_name: (string )Custom name to associate with newly projected shape file
-	RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
-			 Where the shapes cover and '0' in all other locations.
-			 Additionally adds the mask to the map dictionary
-	'''
+	def combine_masks(self, old1, old2, new):
+		old_mask1 = self.masks[old1]
+		old_mask2 = self.masks[old2]
+		del self.masks[old1]
+		del self.masks[old2]
+		self.newPxMask((old_mask1+old_mask2 > 0), new)
+	
 	def newMask(self, shape_fn, mask_name):
+		''' 
+		INPUT: 
+			-shape_fn:  (string) Shape filename to be reprojected
+			-mask_name: (string )Custom name to associate with newly projected shape file
+		RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
+				 Where the shapes cover and '0' in all other locations.
+				 Additionally adds the mask to the map dictionary
+		'''
 		dataSource =  self._projectShape(shape_fn, mask_name)
 
 		if dataSource is None:

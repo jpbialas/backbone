@@ -13,7 +13,7 @@ def vis():
 
 	
 	norm = features.normalized(myMap.getMapData())
-	blur = features.blurred(myMap.getMap())
+	blur = features.blurred(myMap.img)
 
 
 	f1 = plt.figure('Colors', frameon = False)
