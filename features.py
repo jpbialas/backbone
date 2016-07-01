@@ -4,7 +4,8 @@ import cv2
 import skimage.feature as feat
 from skimage.filters.rank import windowed_histogram
 from skimage.feature import greycomatrix, greycoprops
-
+from skimage.filters.rank import entropy
+from skimage.morphology import disk
 
 def edge_density(img, ksize, amp = 1):
 	'''
@@ -33,8 +34,23 @@ def normalized(data):
 	return (data - np.mean(data))/np.std(data), np.array(['red', 'green', 'blue'])
 	
 
+def entr(bw_img, disk_size = 5):
+	h,w = bw_img.shape
+	print "starting entropy"
+	entr_img = entropy(bw_img, disk(disk_size))
+	print("done with entropy")
+	plt.imshow(entr_img, cmap = 'gray')
+	plt.show()
+	print(entr_img.shape)
+	return entr_img.reshape((h*w,1)), np.array(['entropy'])
+
+
+
 def mirror_border(img, border_width, border_height):
 	return cv2.copyMakeBorder(img, border_height, border_height, border_width, border_width, cv2.BORDER_REFLECT)
+
+
+
 
 def GLCM(img, k):
 	mirror_img = mirror_border(img, k/2, k/2)
@@ -47,7 +63,7 @@ def GLCM(img, k):
 			glcm = greycomatrix(new_window, [1],[0], symmetric = True, normed = True)
 			contrast = greycoprops(glcm, 'contrast')
 			new_img[i-k/2,j] = contrast
-	return new_img
+	return new_img,np.array('GLCM')
 
 
 
@@ -81,4 +97,4 @@ def hog(bw_img, ksize, bins = 16):
 
 	return hist.reshape(h*w, bins), np.array(names)
 	#print(hist.shape)
-	#return np.std(hist, axis = 2).reshape(h*w,1)
+	#return np.std(np.sort(hist, axis = 2), axis = 2).reshape(h*w,1)

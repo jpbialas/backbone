@@ -51,17 +51,38 @@ class MapOverlay:
 		h,w,c = self.img.shape
 		return self.img.reshape(h*w, c)
 
-	
 
+	def get_features(self):
+		return self.features, self.label_names
 	
-	def getLabels(self, mask_name):
+	def gen_features(self, edge_k, hog_k, hog_bins):
+		'''
+		input:
+			- myMap: MapObject
+		output:
+			- feature representation of map
+		'''
+		rgb, rgb_name = features.normalized(self.getMapData())
+		ave_rgb, ave_rgb_name = features.blurred(self.img)
+		edges, edges_name = features.edge_density(self.bw_img, edge_k, amp = 1)
+		hog, hog_name = features.hog(self.bw_img, hog_k)
+		data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
+		names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
+		self.features =  data
+		self.label_names =  names
+
+
+	def getLabels(self, mask_name,all_rows = True, i = 0):
 		'''
 		INPUT: 
 			- mask_name: (string) Name of mask to get labels for
 		OUTPUT: 
 			- (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
 		'''
-		return self.masks[mask_name].ravel()
+		if all_rows:
+			return self.masks[mask_name]
+		else:
+			return self.masks[mask_name][i]
 
 
 	
@@ -136,7 +157,7 @@ class MapOverlay:
 		    inFeature.Destroy()
 		    inFeature = in_lyr.GetNextFeature()
 
-		return outDataSet
+		return outDataSet, targetSR
 
 
 	def maskImg(self, mask_name):
@@ -146,8 +167,11 @@ class MapOverlay:
 		RESULT: 
 			- Displays base map overlayed with relevant mask shapes
 		'''
+
 		mask = self.masks[mask_name]
-		h,w = mask.shape
+		print(mask.shape)
+		h,w = self.rows, self.cols
+		print(h,w, h*w)
 		adj_mask = np.logical_not(mask).reshape(h,w,1)
 
 		
@@ -156,7 +180,7 @@ class MapOverlay:
 
 	def newPxMask(self, mask, mask_name):
 		h,w,c = self.img.shape
-		self.masks[mask_name] = mask.reshape(h,w)
+		self.masks[mask_name] = mask.ravel()
 
 
 	def combine_masks(self, old1, old2, new):
@@ -175,15 +199,10 @@ class MapOverlay:
 				 Where the shapes cover and '0' in all other locations.
 				 Additionally adds the mask to the map dictionary
 		'''
-		dataSource =  self._projectShape(shape_fn, mask_name)
+		dataSource, _ =  self._projectShape(shape_fn, mask_name)
 
-		if dataSource is None:
-		  print 'Could not open file'
-		  sys.exit(1)
 
 		layer = dataSource.GetLayer()
-		feature = layer.GetNextFeature()
-
 		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
 
 		maxx, miny = self.latlonToPx(lat_min,lon_max)
@@ -215,6 +234,139 @@ class MapOverlay:
 		
 		mask = np.fliplr(mask)
 		mask = mask>0
+		self.masks[mask_name] = mask.ravel()
 
-		self.masks[mask_name] = mask
+	def new_mask_set(self, shape_fn, mask_name):
+		''' 
+		INPUT: 
+			-shape_fn:  (string) Shape filename to be reprojected
+			-mask_name: (string )Custom name to associate with newly projected shape file
+		RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
+				 Where the shapes cover and '0' in all other locations.
+				 Additionally adds the mask to the map dictionary
+		'''
+		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
+
+
+		layer = dataSource.GetLayer()
+
 		
+
+		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+
+		maxx, miny = self.latlonToPx(lat_min,lon_max)
+		minx, maxy = self.latlonToPx(lat_max,lon_min)
+		nrows = min(maxy-miny, self.rows)
+		ncols = min(maxx-minx, self.cols)
+		minx = max(0, minx)
+		miny = max(0, miny)
+		maxx = min(maxx, self.cols)
+		maxy = min(maxy, self.rows)
+
+		xres=(lat_max-lat_min)/float(maxx-minx)
+		yres=(lon_max-lon_min)/float(maxy-miny)
+
+		geotransform=(lat_min,xres,0,lon_max,0, -yres)
+		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
+		dst_ds.SetGeoTransform(geotransform)
+
+		nfeatures = layer.GetFeatureCount()
+		print(nfeatures)
+		print("starting map segmentation reading")
+		self.masks[mask_name] = np.zeros((nfeatures, self.cols*self.rows))
+		for i in range(nfeatures):
+			if i % 10 == 0:
+				print i
+			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
+			band.Fill(0) #initialise raster with zeros
+			band.SetNoDataValue(0)
+			band.FlushCache()
+			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
+			#print(dataSource)
+			feature = layer.GetFeature(i)
+			new_layer.CreateFeature(feature)
+			layer.DeleteFeature(i)
+			gdal.RasterizeLayer(dst_ds, [1], new_layer)#, options = ["ATTRIBUTE=ID"])
+			mask = dst_ds.GetRasterBand(1).ReadAsArray()
+			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+			mask = np.fliplr(mask)
+			mask = mask>0
+			feature.Destroy()
+			#self.masks["{}_{}".format(mask_name,i)] = mask
+			
+			self.masks[mask_name][i] = mask.astype('bool_').ravel()
+			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
+		print("finished map segmentation reading")
+		dataSource.Destroy()
+		return nfeatures
+
+	def memory_saver(self, shape_fn, mask_name, predictions):
+	
+		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
+
+
+		layer = dataSource.GetLayer()
+
+		
+
+		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+
+		maxx, miny = self.latlonToPx(lat_min,lon_max)
+		minx, maxy = self.latlonToPx(lat_max,lon_min)
+		nrows = min(maxy-miny, self.rows)
+		ncols = min(maxx-minx, self.cols)
+		minx = max(0, minx)
+		miny = max(0, miny)
+		maxx = min(maxx, self.cols)
+		maxy = min(maxy, self.rows)
+
+		xres=(lat_max-lat_min)/float(maxx-minx)
+		yres=(lon_max-lon_min)/float(maxy-miny)
+
+		geotransform=(lat_min,xres,0,lon_max,0, -yres)
+		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
+		dst_ds.SetGeoTransform(geotransform)
+
+		nfeatures = layer.GetFeatureCount()
+		print(nfeatures)
+		print("starting map segmentation reading")
+		full_mask = np.zeros((self.rows, self.cols))
+		for i in range(nfeatures):
+			if i % 10 == 0:
+				print i
+			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
+			band.Fill(0) #initialise raster with zeros
+			band.SetNoDataValue(0)
+			band.FlushCache()
+			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
+			#print(dataSource)
+			feature = layer.GetFeature(i)
+			new_layer.CreateFeature(feature)
+			layer.DeleteFeature(i)
+			gdal.RasterizeLayer(dst_ds, [1], new_layer)#, options = ["ATTRIBUTE=ID"])
+			mask = dst_ds.GetRasterBand(1).ReadAsArray()
+			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+			mask = np.fliplr(mask)
+			mask = mask>0
+			feature.Destroy()
+			new_mask = np.logical_and(predictions, mask)
+			fraction = float(np.sum(new_mask))/np.sum(mask)
+			
+			full_mask += mask*fraction
+			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
+		print("finished map segmentation reading")
+		dataSource.Destroy()
+
+
+		fig = plt.figure()
+		fig.subplots_adjust(bottom=0, top = 1, wspace = 0, hspace = 0)
+		
+		plt.subplot(121),plt.imshow(self.maskImg('damage'))
+		plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+		plt.subplot(122),plt.imshow(full_mask, cmap = 'gray')
+		plt.title('Segment Probability'), plt.xticks([]), plt.yticks([])
+		plt.colorbar()
+		print('saving')
+		fig.savefig('temp/segements.png', format='png', dpi=1200)
+		print('done saving')
+		plt.show()

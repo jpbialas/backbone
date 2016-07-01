@@ -24,8 +24,41 @@ def prec_recall_map(myMap, mask_true, mask_predict):
 	precision = float(TP)/(TP+FP)
 	recall = float(TP)/(TP+FN)
 	accuracy = float(TP + TN)/(TP+FN+TN+FP)
+	f1 = float(2*precision*recall)/(precision+recall)
 
-	return precision, recall, accuracy
+	return precision, recall, accuracy, f1
+
+def label_segments(my_map, mask_name, n_segs, predictions):
+	full_mask = np.zeros((my_map.rows, my_map.cols))
+	'''print(n_segs)
+	for i in range(n_segs):
+		next_seg = my_map.getLabels('{}_{}'.format(mask_name, i)).reshape(my_map.rows, my_map.cols)
+		new_mask = np.logical_and(predictions, next_seg)
+		#plt.imshow(new_mask, cmap = 'gray')
+		#plt.show()
+		fraction = float(np.sum(new_mask))/np.sum(my_map.getLabels('{}_{}'.format(mask_name, i)))
+		print(fraction, i)
+		full_mask += next_seg*fraction'''
+
+	print(predictions.ravel().shape)
+	print(my_map.getLabels(mask_name).shape)
+	seg_masks = my_map.getLabels(mask_name)
+	print('starting calculations')
+	new_masks = np.logical_and(seg_masks, predictions.astype('bool_').ravel())
+	fractions = np.sum(new_masks, axis = 1)/np.sum(seg_masks, axis = 1)
+	full_mask = np.sum(seg_masks*fractions.reshape(n_segs, 1), axis = 0).reshape(my_map.rows, my_map.cols)
+	print('done calculating')
+
+	fig = plt.figure()
+	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+	plt.subplot(121),plt.imshow(my_map.img)
+	plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+	plt.subplot(122),plt.imshow(full_mask, cmap = 'gray')
+	plt.title('Segment Probability'), plt.xticks([]), plt.yticks([])
+	print('saving')
+	fig.savefig('temp/segements.png', format='png', dpi=1200)
+	print('done saving')
+	plt.show()
 
 def prec_recall(label, prediction):
 	'''
@@ -44,8 +77,9 @@ def prec_recall(label, prediction):
 	precision = float(TP)/(TP+FP)
 	recall = float(TP)/(TP+FN)
 	accuracy = float(TP + TN)/(TP+FN+TN+FP)
+	f1 = float(2*precision*recall)/(precision+recall)
 
-	return precision, recall, accuracy
+	return precision, recall, accuracy, f1
 
 def side_by_side(myMap, mask_true, mask_predict):
 	fig = plt.figure()
@@ -54,7 +88,7 @@ def side_by_side(myMap, mask_true, mask_predict):
 	plt.title('Labelled Image'), plt.xticks([]), plt.yticks([])
 	plt.subplot(122),plt.imshow(myMap.maskImg(mask_predict))
 	plt.title('Predicted Image'), plt.xticks([]), plt.yticks([])
-	fig.savefig('comparison.png', format='png', dpi=1200)
+	fig.savefig('temp/comparison.png', format='png', dpi=1200)
 	plt.show()
 
 def feature_importance(model, labels, X):
