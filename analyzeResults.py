@@ -1,4 +1,4 @@
-import mapOverlay as MapOverlay
+from mapOverlay import MapOverlay
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import cv2
@@ -28,39 +28,9 @@ def prec_recall_map(myMap, mask_true, mask_predict):
 
 	return precision, recall, accuracy, f1
 
-def label_segments(my_map, mask_name, n_segs, predictions):
-	full_mask = np.zeros((my_map.rows, my_map.cols))
-	'''print(n_segs)
-	for i in range(n_segs):
-		next_seg = my_map.getLabels('{}_{}'.format(mask_name, i)).reshape(my_map.rows, my_map.cols)
-		new_mask = np.logical_and(predictions, next_seg)
-		#plt.imshow(new_mask, cmap = 'gray')
-		#plt.show()
-		fraction = float(np.sum(new_mask))/np.sum(my_map.getLabels('{}_{}'.format(mask_name, i)))
-		print(fraction, i)
-		full_mask += next_seg*fraction'''
 
-	print(predictions.ravel().shape)
-	print(my_map.getLabels(mask_name).shape)
-	seg_masks = my_map.getLabels(mask_name)
-	print('starting calculations')
-	new_masks = np.logical_and(seg_masks, predictions.astype('bool_').ravel())
-	fractions = np.sum(new_masks, axis = 1)/np.sum(seg_masks, axis = 1)
-	full_mask = np.sum(seg_masks*fractions.reshape(n_segs, 1), axis = 0).reshape(my_map.rows, my_map.cols)
-	print('done calculating')
 
-	fig = plt.figure()
-	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-	plt.subplot(121),plt.imshow(my_map.img)
-	plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-	plt.subplot(122),plt.imshow(full_mask, cmap = 'gray')
-	plt.title('Segment Probability'), plt.xticks([]), plt.yticks([])
-	print('saving')
-	fig.savefig('temp/segements.png', format='png', dpi=1200)
-	print('done saving')
-	plt.show()
-
-def prec_recall(label, prediction):
+def prec_recall(label, prediction, lower_limit = 0):
 	'''
 	INPUT:
 		- confusion_matrix: (2x2 ndarray) Confusion matrix of shape: (actual values) x (predicted values)
@@ -68,18 +38,61 @@ def prec_recall(label, prediction):
 		- (tuple) A Tuple containing the precision and recall of the confusion matrix
 
 	'''
+	prediction = prediction > lower_limit
+
 	conf = confusion_matrix(label, prediction)
 	TP = conf[1,1]
 	FP = conf[0,1]
 	TN = conf[0,0]
 	FN = conf[1,0]
+	print TP,FP,TN,FN
 
-	precision = float(TP)/(TP+FP)
-	recall = float(TP)/(TP+FN)
-	accuracy = float(TP + TN)/(TP+FN+TN+FP)
-	f1 = float(2*precision*recall)/(precision+recall)
+	precision = 0 if TP+FP == 0 else float(TP)/(TP+FP)
+	recall = 0 if TP+FN == 0 else float(TP)/(TP+FN)
+	accuracy = 0 if (TP+FN+TN+FP) == 0 else float(TP + TN)/(TP+FN+TN+FP)
+	f1 = 0 if precision+recall == 0 else float(2*precision*recall)/(precision+recall)
 
 	return precision, recall, accuracy, f1
+
+def test_thresholds():
+	print("loading")
+	my_map = MapOverlay('datafromjoe/1-0003-0002.tif')
+	my_map.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
+	predict_2 = np.loadtxt('temp/predictions.csv', delimiter = ',')
+	labels = my_map.getLabels('damage')
+	base_p, base_r, base_a, base_f =  prec_recall(labels, predict_2.ravel())
+	predictions = np.loadtxt('temp/segments_100.csv', delimiter = ',')
+	print("done loading")
+	results = [[],[],[],[]]
+	rate = 0.05
+	for i in range(int(1/rate)):
+		p,r,a,f = prec_recall(labels, predictions.ravel(), i*rate)
+		results[0].append(p)
+		results[1].append(r)
+		results[2].append(a)
+		results[3].append(f)
+		print(i*rate, p, r, a ,f)
+	fig = plt.figure("Threshold's Effect on F1")
+	fig.suptitle("Threshold's Effect on F1", fontsize=14)
+	ax = fig.add_subplot(111)
+
+	t = np.arange(0,1,rate)
+	ax.set_xlabel('Threshold (%)')
+	ax.set_ylabel('Percentage (%)')
+	precision = ax.plot(t, results[0], 'r-', label = 'Precision')
+	recall = ax.plot(t, results[1], 'b-', label = 'Recall')
+	#acc = ax.plot(t, results[2], 'g--', label = 'Accuracy')
+	f1 =  ax.plot(t, results[3], 'y-', label = 'F1')
+	base_p_graph = ax.plot(t, np.ones_like(t)*base_p, 'r--', label = 'Precision Compare')
+	base_p_graph = ax.plot(t, np.ones_like(t)*base_r, 'b--', label = 'Recall Compare')
+	base_p_graph = ax.plot(t, np.ones_like(t)*base_f, 'y--', label = 'F1 Compare')
+
+	
+	plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+       ncol=6, mode="expand", borderaxespad=0.)
+	plt.show()
+
+#test_thresholds()
 
 def side_by_side(myMap, mask_true, mask_predict):
 	fig = plt.figure()

@@ -18,7 +18,7 @@ class MapOverlay:
 	'''
 	def __init__(self, map_fn):
 		self.masks = {}
-
+		self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
 		driver = gdal.GetDriverByName('HFA')
 		driver.Register()
 		ds = gdal.Open(map_fn, 0)
@@ -72,17 +72,14 @@ class MapOverlay:
 		self.label_names =  names
 
 
-	def getLabels(self, mask_name,all_rows = True, i = 0):
+	def getLabels(self, mask_name):
 		'''
 		INPUT: 
 			- mask_name: (string) Name of mask to get labels for
 		OUTPUT: 
 			- (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
 		'''
-		if all_rows:
-			return self.masks[mask_name]
-		else:
-			return self.masks[mask_name][i]
+		return self.masks[mask_name]
 
 
 	
@@ -169,9 +166,7 @@ class MapOverlay:
 		'''
 
 		mask = self.masks[mask_name]
-		print(mask.shape)
 		h,w = self.rows, self.cols
-		print(h,w, h*w)
 		adj_mask = np.logical_not(mask).reshape(h,w,1)
 
 		
@@ -236,71 +231,8 @@ class MapOverlay:
 		mask = mask>0
 		self.masks[mask_name] = mask.ravel()
 
-	def new_mask_set(self, shape_fn, mask_name):
-		''' 
-		INPUT: 
-			-shape_fn:  (string) Shape filename to be reprojected
-			-mask_name: (string )Custom name to associate with newly projected shape file
-		RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
-				 Where the shapes cover and '0' in all other locations.
-				 Additionally adds the mask to the map dictionary
-		'''
-		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
 
-
-		layer = dataSource.GetLayer()
-
-		
-
-		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
-
-		maxx, miny = self.latlonToPx(lat_min,lon_max)
-		minx, maxy = self.latlonToPx(lat_max,lon_min)
-		nrows = min(maxy-miny, self.rows)
-		ncols = min(maxx-minx, self.cols)
-		minx = max(0, minx)
-		miny = max(0, miny)
-		maxx = min(maxx, self.cols)
-		maxy = min(maxy, self.rows)
-
-		xres=(lat_max-lat_min)/float(maxx-minx)
-		yres=(lon_max-lon_min)/float(maxy-miny)
-
-		geotransform=(lat_min,xres,0,lon_max,0, -yres)
-		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
-		dst_ds.SetGeoTransform(geotransform)
-
-		nfeatures = layer.GetFeatureCount()
-		print(nfeatures)
-		print("starting map segmentation reading")
-		self.masks[mask_name] = np.zeros((nfeatures, self.cols*self.rows))
-		for i in range(nfeatures):
-			if i % 10 == 0:
-				print i
-			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
-			band.Fill(0) #initialise raster with zeros
-			band.SetNoDataValue(0)
-			band.FlushCache()
-			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
-			#print(dataSource)
-			feature = layer.GetFeature(i)
-			new_layer.CreateFeature(feature)
-			layer.DeleteFeature(i)
-			gdal.RasterizeLayer(dst_ds, [1], new_layer)#, options = ["ATTRIBUTE=ID"])
-			mask = dst_ds.GetRasterBand(1).ReadAsArray()
-			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
-			mask = np.fliplr(mask)
-			mask = mask>0
-			feature.Destroy()
-			#self.masks["{}_{}".format(mask_name,i)] = mask
-			
-			self.masks[mask_name][i] = mask.astype('bool_').ravel()
-			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
-		print("finished map segmentation reading")
-		dataSource.Destroy()
-		return nfeatures
-
-	def memory_saver(self, shape_fn, mask_name, predictions):
+	def label_segments(self, shape_fn, mask_name, predictions):
 	
 		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
 
@@ -359,14 +291,18 @@ class MapOverlay:
 
 
 		fig = plt.figure()
-		fig.subplots_adjust(bottom=0, top = 1, wspace = 0, hspace = 0)
-		
+		fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+		np.savetxt('temp/segments_100.csv', full_mask, delimiter = ',')
 		plt.subplot(121),plt.imshow(self.maskImg('damage'))
 		plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-		plt.subplot(122),plt.imshow(full_mask, cmap = 'gray')
+		plt.subplot(122)
+		probs = plt.imshow(full_mask, cmap = 'gray')
 		plt.title('Segment Probability'), plt.xticks([]), plt.yticks([])
-		plt.colorbar()
+		fig.subplots_adjust(right=0.9)
+		cbar_ax = fig.add_axes([0.91, 0.3, 0.03, 0.4])
+		fig.colorbar(probs, cax=cbar_ax)
 		print('saving')
 		fig.savefig('temp/segements.png', format='png', dpi=1200)
 		print('done saving')
+
 		plt.show()

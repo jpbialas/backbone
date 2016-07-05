@@ -6,8 +6,9 @@ from skimage.filters.rank import windowed_histogram
 from skimage.feature import greycomatrix, greycoprops
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
+import os
 
-def edge_density(img, ksize, amp = 1):
+def edge_density(img, ksize, img_name = "", amp = 1):
 	'''
 	INPUT:
 		- img:   (nxm ndarray) Gray-scale image
@@ -16,33 +17,49 @@ def edge_density(img, ksize, amp = 1):
 	OUTPUT:
 		- (n*m x 1 ndarray) Array containing labels related to texture of each pixel's surrounidng area
 	'''
-	new_img = img.copy()
+	p = os.path.join('features', "edge_{}_{}_{}.npy".format(ksize,amp,img_name))
+	if os.path.exists(p):
+		return np.load(p)
+	else:
+		new_img = img.copy()
+		edges = cv2.Canny(img,50,100)
+		density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+		n = density.ravel().shape[0]
+		res = density.ravel().reshape((n,1))**amp
+		np.save(p, res)
+		return res, np.array(['edges'])
 
-	edges = cv2.Canny(img,50,100)
-	density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
-	n = density.ravel().shape[0]
-	return density.ravel().reshape((n,1))**amp, np.array(['edges'])
 
-
-def normalized(data):
+def normalized(data, img_name = ""):
 	'''
 	INPUT: 
 		- data: (ndarray) Data to be normalized
 	OUTPUT:
 		- (n*m ndarray) Normalized data with 0 mean and standard normal variance
 	'''
-	return (data - np.mean(data))/np.std(data), np.array(['red', 'green', 'blue'])
+	p = os.path.join('features', "norm_{}.npy".format(img_name))
+	if os.path.exists(p):
+		return np.load(p)
+	else:
+		res = (data - np.mean(data))/np.std(data)
+		np.save(p, res)
+		return res, np.array(['red', 'green', 'blue'])
 	
 
-def entr(bw_img, disk_size = 5):
-	h,w = bw_img.shape
-	print "starting entropy"
-	entr_img = entropy(bw_img, disk(disk_size))
-	print("done with entropy")
-	plt.imshow(entr_img, cmap = 'gray')
-	plt.show()
-	print(entr_img.shape)
-	return entr_img.reshape((h*w,1)), np.array(['entropy'])
+def entr(bw_img, img_name = "", disk_size = 5):
+	p = os.path.join('features', "entropy_{}_{}.npy".format(disk_size,img_name))
+	if os.path.exists(p):
+		return np.load(p)
+	else:
+		h,w = bw_img.shape
+		print "starting entropy"
+		entr_img = entropy(bw_img, disk(disk_size))
+		print("done with entropy")
+		plt.imshow(entr_img, cmap = 'gray')
+		plt.show()
+		res = entr_img.reshape((h*w,1))
+		np.save(p,res)
+		return res, np.array(['entropy'])
 
 
 
@@ -52,7 +69,7 @@ def mirror_border(img, border_width, border_height):
 
 
 
-def GLCM(img, k):
+def GLCM(img, k, img_name = ""):
 	mirror_img = mirror_border(img, k/2, k/2)
 	print("done extending mirror")
 	new_img = np.copy(img)
@@ -67,7 +84,7 @@ def GLCM(img, k):
 
 
 
-def blurred(img, ksize = 101):
+def blurred(img, img_name = "", ksize = 101):
 	'''
 	INPUT:
 		- img: (n x m x c ndarray) Image to be blurred
@@ -77,24 +94,36 @@ def blurred(img, ksize = 101):
 	OUTPUT:
 		- (n*m x c ndarray) Ravelled image with gaussian blur applied
 	'''
-	h,w,c = img.shape
-	return cv2.GaussianBlur(img,(ksize,ksize),0).reshape(h*w,c), np.array(['ave_red','ave_green', 'ave_blue'])
+	p = os.path.join('features', "blurred_{}_{}.npy".format(ksize,img_name))
+	if os.path.exists(p):
+		return np.load(p)
+	else:
+		h,w,c = img.shape
+		res = cv2.GaussianBlur(img,(ksize,ksize),0).reshape(h*w,c)
+		np.save(p, res)
+		return res, np.array(['ave_red','ave_green', 'ave_blue'])
 
 
-def hog(bw_img, ksize, bins = 16):
-	h,w = bw_img.shape
-	selem = np.ones((ksize, ksize)).astype('float')
-	gx = cv2.Sobel(bw_img, cv2.CV_32F, 1, 0)
-	gy = cv2.Sobel(bw_img, cv2.CV_32F, 0, 1)
-	mag, ang = cv2.cartToPolar(gx, gy)
-	angles = ang/2.0*np.pi*255
+def hog(bw_img, ksize, img_name = "", bins = 16):
+	p = os.path.join('features', "hog_{}_{}_{}.npy".format(ksize,bins,img_name))
+	if os.path.exists(p):
+		return np.load(p)
+	else:
+		h,w = bw_img.shape
+		selem = np.ones((ksize, ksize)).astype('float')
+		gx = cv2.Sobel(bw_img, cv2.CV_32F, 1, 0)
+		gy = cv2.Sobel(bw_img, cv2.CV_32F, 0, 1)
+		mag, ang = cv2.cartToPolar(gx, gy)
+		angles = ang/2.0*np.pi*255
 
-	hist = windowed_histogram(angles.astype('uint8'), selem, n_bins = bins)
+		hist = windowed_histogram(angles.astype('uint8'), selem, n_bins = bins)
 
-	names = []
-	for i in range(bins):
-		names.append('hog {}'.format(i))
+		names = []
+		for i in range(bins):
+			names.append('hog {}'.format(i))
 
-	return hist.reshape(h*w, bins), np.array(names)
-	#print(hist.shape)
-	#return np.std(np.sort(hist, axis = 2), axis = 2).reshape(h*w,1)
+		res = hist.reshape(h*w, bins)
+		np.save(p, res)
+		return res, np.array(names)
+		#print(hist.shape)
+		#return np.std(np.sort(hist, axis = 2), axis = 2).reshape(h*w,1)

@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import analyzeResults
 
 
-def v_print(myStr, vocal):
-	if vocal:
+def v_print(myStr, verbose):
+	if verbose:
 		print(myStr)
 
 def sample(labels, nsamples):
@@ -61,17 +61,18 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 		- feature representation of map
 	'''
 	#entropy, entropy_name = features.entr(myMap.bw_img)
-	rgb, rgb_name = features.normalized(myMap.getMapData())
-	ave_rgb, ave_rgb_name = features.blurred(myMap.img)
-	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, amp = 1)
-	hog, hog_name = features.hog(myMap.bw_img, hog_k)
+	
+	rgb, rgb_name = features.normalized(myMap.getMapData(), img_name = myMap.name)
+	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
+	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
+	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
 	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
 	names = np.concatenate((rgb_name, ave_rgb_name, hog_name))
 	return data, names
 
 
 
-def predict_all(model, myMap, mask_name = 'damage', load = False, erode = False, vocal = True):
+def predict_all(model, myMap, mask_name = 'damage', load = False, erode = False, verbose = True):
 	'''
 	INPUT:
 		- model:  (sklearn model) Trained sklearn model
@@ -93,14 +94,14 @@ def predict_all(model, myMap, mask_name = 'damage', load = False, erode = False,
 	y = myMap.getLabels(mask_name)
 
 	if not load:
-		v_print("Starting full prediction", vocal)
+		v_print("Starting full prediction", verbose)
 		full_predict = model.predict(X).reshape(h,w)
-		v_print("Ending full prediction", vocal)
+		v_print("Ending full prediction", verbose)
 		np.savetxt('temp/predictions.csv', full_predict, delimiter = ',', fmt = "%d")
 	else:
-		v_print("Loading prediction", vocal)
+		v_print("Loading prediction", verbose)
 		full_predict = np.loadtxt('temp/predictions.csv', delimiter = ',')
-		v_print("Done loading prediction", vocal)
+		v_print("Done loading prediction", verbose)
 	if erode:
 		kernel = np.ones((5,5),np.uint8)
 		full_predict = cv2.erode(full_predict, kernel, iterations = 2)
@@ -116,14 +117,14 @@ def predict_all(model, myMap, mask_name = 'damage', load = False, erode = False,
 	analyzeResults.side_by_side(myMap, mask_name, 'damage_pred')
 
 
-def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.1, frac_test = 0.1, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, vocal = True):
-	v_print('Starting train load', vocal)
+def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
+	v_print('Starting train gen', verbose)
 	X_train, labels = gen_features(map_train, edge_k, hog_k, nbins)
-	v_print('Done load', vocal)
+	v_print('Done train gen', verbose)
 
-	v_print('Starting test load', vocal)
+	v_print('Starting test gen', verbose)
 	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
-	v_print('Done test load', vocal)
+	v_print('Done test gen', verbose)
 
 	y_train =  map_train.getLabels(mask_train)
 	n_train = y_train.shape[0]
@@ -133,20 +134,20 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 	n_test = y_test.shape[0]
 	test = np.random.random_integers(0,y_test.shape[0], int(n_test*frac_test))
 
-	v_print("Starting Modelling", vocal)
+	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees)
 	model.fit(X_train[train], y_train[train])
-	v_print("Done Modelling", vocal)
+	v_print("Done Modelling", verbose)
 
 
-	v_print("Starting Testing", vocal)
+	v_print("Starting Testing", verbose)
 	prediction = model.predict(X_test[test])
 	ground_truth = y_test[test]
-	v_print("Done Testing", vocal)
+	v_print("Done Testing", verbose)
 	precision, recall, accuracy, f1 = analyzeResults.prec_recall(ground_truth, prediction)
 	return precision, recall,  accuracy, f1,  model, X_test, y_test, labels
 
-def train_model(myMap, mask_name = 'damage', frac_train = 0.1, frac_test = 0.1, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, vocal = True):
+def train_model(myMap, mask_name = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
 	'''
 	INPUT:
 		-fn: 		   (string) Filename of .tiff file containing map
@@ -164,18 +165,18 @@ def train_model(myMap, mask_name = 'damage', frac_train = 0.1, frac_test = 0.1, 
 			- (sklearn model) Trained sklearn model
 			- (ndarray) Data collected from .tiff file
 	'''
-	v_print('Starting gen', vocal)
+	v_print('Starting gen', verbose)
 	X, labels = gen_features(myMap, edge_k, hog_k, nbins)
-	v_print('Ending gen', vocal)
+	v_print('Ending gen', verbose)
 
 	y = myMap.getLabels(mask_name)
 	n = y.shape[0]
 	train, test = sample_split(y, int(n*frac_train), int(n*frac_test))
 
-	v_print("Starting Modelling", vocal)
+	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees)
 	model.fit(X[train], y[train])
-	v_print("Done Modelling", vocal)
+	v_print("Done Modelling", verbose)
 
 	y_pred = model.predict(X[test])
 	y_true = y[test]
@@ -202,7 +203,7 @@ if __name__ == "__main__":
 	print("recall = {}".format(recall))
 	print("accuracy = {}".format(accuracy))
 	print("f1 = {}".format(f1))'''
-	precision, recall,  accuracy, f1,  model2, X, y, names = train_and_test(myMap1, myMap2, frac_test = 0.001)
+	precision, recall,  accuracy, f1,  model2, X, y, names = train_and_test(myMap1, myMap2)
 	print("precision = {}".format(precision))
 	print("recall = {}".format(recall))
 	print("accuracy = {}".format(accuracy))
