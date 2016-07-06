@@ -231,6 +231,53 @@ class MapOverlay:
 		mask = mask>0
 		self.masks[mask_name] = mask.ravel()
 
+	def new_segmentation(self, shape_fn, seg_level, predictions):
+		mask_name = str(seg_level)
+		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
+		layer = dataSource.GetLayer()
+		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+
+		maxx, miny = self.latlonToPx(lat_min,lon_max)
+		minx, maxy = self.latlonToPx(lat_max,lon_min)
+		nrows = min(maxy-miny, self.rows)
+		ncols = min(maxx-minx, self.cols)
+		minx = max(0, minx)
+		miny = max(0, miny)
+		maxx = min(maxx, self.cols)
+		maxy = min(maxy, self.rows)
+
+		xres=(lat_max-lat_min)/float(maxx-minx)
+		yres=(lon_max-lon_min)/float(maxy-miny)
+
+		geotransform=(lat_min,xres,0,lon_max,0, -yres)
+		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
+		dst_ds.SetGeoTransform(geotransform)
+
+		nfeatures = layer.GetFeatureCount()
+		print(nfeatures)
+		print("starting map segmentation reading")
+		full_mask = np.zeros((self.rows, self.cols))
+		for i in range(nfeatures):
+			if i % 10 == 0:
+				print i
+			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
+			band.Fill(0) #initialise raster with zeros
+			band.SetNoDataValue(0)
+			band.FlushCache()
+			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
+			feature = layer.GetFeature(i)
+			new_layer.CreateFeature(feature)
+			layer.DeleteFeature(i)
+			gdal.RasterizeLayer(dst_ds, [1], new_layer)
+			mask = dst_ds.GetRasterBand(1).ReadAsArray()
+			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+			mask = np.fliplr(mask)
+			mask = mask>0
+			feature.Destroy()
+			full_mask += mask*i
+			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
+		print("finished map segmentation reading")
+		dataSource.Destroy()
 
 	def label_segments(self, shape_fn, mask_name, predictions):
 	

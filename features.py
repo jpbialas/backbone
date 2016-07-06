@@ -19,7 +19,7 @@ def edge_density(img, ksize, img_name = "", amp = 1):
 	'''
 	p = os.path.join('features', "edge_{}_{}_{}.npy".format(ksize,amp,img_name))
 	if os.path.exists(p):
-		return np.load(p)
+		return np.load(p), np.array(['edges'])
 	else:
 		new_img = img.copy()
 		edges = cv2.Canny(img,50,100)
@@ -39,7 +39,7 @@ def normalized(data, img_name = ""):
 	'''
 	p = os.path.join('features', "norm_{}.npy".format(img_name))
 	if os.path.exists(p):
-		return np.load(p)
+		return np.load(p), np.array(['red', 'green', 'blue'])
 	else:
 		res = (data - np.mean(data))/np.std(data)
 		np.save(p, res)
@@ -49,12 +49,10 @@ def normalized(data, img_name = ""):
 def entr(bw_img, img_name = "", disk_size = 5):
 	p = os.path.join('features', "entropy_{}_{}.npy".format(disk_size,img_name))
 	if os.path.exists(p):
-		return np.load(p)
+		return np.load(p), np.array(['entropy'])
 	else:
 		h,w = bw_img.shape
-		print "starting entropy"
 		entr_img = entropy(bw_img, disk(disk_size))
-		print("done with entropy")
 		plt.imshow(entr_img, cmap = 'gray')
 		plt.show()
 		res = entr_img.reshape((h*w,1))
@@ -70,17 +68,20 @@ def mirror_border(img, border_width, border_height):
 
 
 def GLCM(img, k, img_name = ""):
-	mirror_img = mirror_border(img, k/2, k/2)
-	print("done extending mirror")
-	new_img = np.copy(img)
-	for i in range(k/2,img.shape[0]):
-		print(i)
-		for j in range(k/2, img.shape[1]):
-			new_window = mirror_img[i-k/2: i+k/2+1, j-k/2: j+k/2+1]
-			glcm = greycomatrix(new_window, [1],[0], symmetric = True, normed = True)
-			contrast = greycoprops(glcm, 'contrast')
-			new_img[i-k/2,j] = contrast
-	return new_img,np.array('GLCM')
+	p = os.path.join('features', "GLCM_{}_{}.npy".format(k,img_name))
+	if os.path.exists(p):
+		return np.load(p), np.array(['GLCM'])
+	else:
+		mirror_img = mirror_border(img, k/2, k/2)
+		new_img = np.copy(img)
+		for i in range(k/2,img.shape[0]):
+			for j in range(k/2, img.shape[1]):
+				new_window = mirror_img[i-k/2: i+k/2+1, j-k/2: j+k/2+1]
+				glcm = greycomatrix(new_window, [1],[0], symmetric = True, normed = True)
+				contrast = greycoprops(glcm, 'contrast')
+				new_img[i-k/2,j] = contrast
+		np.save(p, new_img)
+		return new_img,np.array('GLCM')
 
 
 
@@ -96,7 +97,7 @@ def blurred(img, img_name = "", ksize = 101):
 	'''
 	p = os.path.join('features', "blurred_{}_{}.npy".format(ksize,img_name))
 	if os.path.exists(p):
-		return np.load(p)
+		return np.load(p), np.array(['ave_red','ave_green', 'ave_blue'])
 	else:
 		h,w,c = img.shape
 		res = cv2.GaussianBlur(img,(ksize,ksize),0).reshape(h*w,c)
@@ -106,8 +107,11 @@ def blurred(img, img_name = "", ksize = 101):
 
 def hog(bw_img, ksize, img_name = "", bins = 16):
 	p = os.path.join('features', "hog_{}_{}_{}.npy".format(ksize,bins,img_name))
+	names = []
+	for i in range(bins):
+		names.append('hog {}'.format(i))
 	if os.path.exists(p):
-		return np.load(p)
+		return np.load(p), np.array(names)
 	else:
 		h,w = bw_img.shape
 		selem = np.ones((ksize, ksize)).astype('float')
@@ -117,13 +121,8 @@ def hog(bw_img, ksize, img_name = "", bins = 16):
 		angles = ang/2.0*np.pi*255
 
 		hist = windowed_histogram(angles.astype('uint8'), selem, n_bins = bins)
-
-		names = []
-		for i in range(bins):
-			names.append('hog {}'.format(i))
-
 		res = hist.reshape(h*w, bins)
 		np.save(p, res)
 		return res, np.array(names)
-		#print(hist.shape)
-		#return np.std(np.sort(hist, axis = 2), axis = 2).reshape(h*w,1)
+
+	#return np.std(hist, axis = 2).reshape(h*w,1), np.array(['hog'])

@@ -60,14 +60,17 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 	output:
 		- feature representation of map
 	'''
-	#entropy, entropy_name = features.entr(myMap.bw_img)
-	
+	#entropy, entropy_name = features.entr(myMap.bw_img, img_name = myMap.name)
+
+	#glcm, glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
 	rgb, rgb_name = features.normalized(myMap.getMapData(), img_name = myMap.name)
 	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
 	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
 	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
+	v_print('Concatenating', False)
 	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
-	names = np.concatenate((rgb_name, ave_rgb_name, hog_name))
+	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
+	v_print('Done Concatenating', False)
 	return data, names
 
 
@@ -128,14 +131,14 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 
 	y_train =  map_train.getLabels(mask_train)
 	n_train = y_train.shape[0]
-	train = sample(y_train, int(n_train*frac_train))
+	train = np.random.random_integers(0,y_train.shape[0], int(n_train*frac_train))#sample(y_train, int(n_train*frac_train))
 
 	y_test = map_test.getLabels(mask_test)
 	n_test = y_test.shape[0]
 	test = np.random.random_integers(0,y_test.shape[0], int(n_test*frac_test))
 
 	v_print("Starting Modelling", verbose)
-	model= RandomForestClassifier(n_estimators=n_trees)
+	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
 	model.fit(X_train[train], y_train[train])
 	v_print("Done Modelling", verbose)
 
@@ -174,7 +177,7 @@ def train_model(myMap, mask_name = 'damage', frac_train = 0.01, frac_test = 0.01
 	train, test = sample_split(y, int(n*frac_train), int(n*frac_test))
 
 	v_print("Starting Modelling", verbose)
-	model= RandomForestClassifier(n_estimators=n_trees)
+	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
 	model.fit(X[train], y[train])
 	v_print("Done Modelling", verbose)
 
@@ -187,10 +190,10 @@ def train_model(myMap, mask_name = 'damage', frac_train = 0.01, frac_test = 0.01
 
 if __name__ == "__main__":
 	
-	fn2 = 'datafromjoe/1-0003-0002.tif'
-	mask_fn2 = 'datafromjoe/1-003-002-damage.shp'
-	fn1 = 'datafromjoe/1-0003-0003.tif'
-	mask_fn1 = 'datafromjoe/1-003-003-damage.shp'
+	fn1 = 'datafromjoe/1-0003-0002.tif'
+	mask_fn1 = 'datafromjoe/1-003-002-damage.shp'
+	fn2 = 'datafromjoe/1-0003-0003.tif'
+	mask_fn2 = 'datafromjoe/1-003-003-damage.shp'
 
 	myMap1 = MapOverlay(fn1)
 	myMap1.newMask(mask_fn1, 'damage')
@@ -203,13 +206,16 @@ if __name__ == "__main__":
 	print("recall = {}".format(recall))
 	print("accuracy = {}".format(accuracy))
 	print("f1 = {}".format(f1))'''
-	precision, recall,  accuracy, f1,  model2, X, y, names = train_and_test(myMap1, myMap2)
+	precision, recall,  accuracy, f1,  model2, X, y, names = train_and_test(myMap1, myMap2, frac_train = .3, verbose = True)
 	print("precision = {}".format(precision))
 	print("recall = {}".format(recall))
 	print("accuracy = {}".format(accuracy))
 	print("f1 = {}".format(f1))
+	analyzeResults.feature_importance(model2, names, X)
 	
 
 	#predict_all(model, myMap2, 'damage')
 	predict_all(model2, myMap2, 'damage')
+	plt.show()
+	
 
