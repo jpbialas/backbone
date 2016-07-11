@@ -131,11 +131,11 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 
 	y_train =  map_train.getLabels(mask_train)
 	n_train = y_train.shape[0]
-	train = np.random.random_integers(0,y_train.shape[0], int(n_train*frac_train))#sample(y_train, int(n_train*frac_train))
+	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))#sample(y_train, int(n_train*frac_train))
 
 	y_test = map_test.getLabels(mask_test)
 	n_test = y_test.shape[0]
-	test = np.random.random_integers(0,y_test.shape[0], int(n_test*frac_test))
+	test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*frac_test))
 
 	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)

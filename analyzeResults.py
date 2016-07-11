@@ -3,6 +3,12 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import cv2
 import matplotlib.pyplot as plt
+from progressbar import ProgressBar
+import progressbar
+
+def custom_progress():
+	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+
 
 
 def prec_recall_map(myMap, mask_true, mask_predict):
@@ -28,7 +34,18 @@ def prec_recall_map(myMap, mask_true, mask_predict):
 
 	return precision, recall, accuracy, f1
 
+def draw_segment_analysis(my_map, labels):
+	pbar = custom_progress()
+	data = np.zeros((my_map.rows*my_map.cols), dtype = 'uint8')
+	segs = my_map.segmentation.ravel()
+	n_segs = int(np.max(segs))
+	for i in pbar(range(n_segs)):
+		data[np.where(segs == i)] = labels[i]
+	img = data.reshape(my_map.rows, my_map.cols)
+	plt.imshow(img, cmap = 'gray')
+	plt.show()
 
+	return img
 
 def prec_recall(label, prediction, lower_limit = 0):
 	'''
@@ -41,6 +58,7 @@ def prec_recall(label, prediction, lower_limit = 0):
 	prediction = prediction > lower_limit
 
 	conf = confusion_matrix(label, prediction)
+	print conf.shape
 	TP = conf[1,1]
 	FP = conf[0,1]
 	TN = conf[0,0]
@@ -53,6 +71,7 @@ def prec_recall(label, prediction, lower_limit = 0):
 	f1 = 0 if precision+recall == 0 else float(2*precision*recall)/(precision+recall)
 
 	return precision, recall, accuracy, f1
+
 
 def test_thresholds():
 	print("loading")

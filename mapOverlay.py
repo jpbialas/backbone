@@ -7,6 +7,12 @@ from osgeo import osr
 from osgeo import ogr #For shapefile
 import os
 from osgeo import gdal, gdalconst #For Raster
+from progressbar import ProgressBar
+import progressbar
+
+def custom_progress():
+	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+
 
 class MapOverlay:
 
@@ -173,6 +179,14 @@ class MapOverlay:
 		overlay = self.img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
 		return overlay
 
+	def mask_segments(self, i):
+		mask = np.in1d(self.segmentation,np.where(i))
+		h,w = self.rows, self.cols
+		adj_mask = np.logical_not(mask).reshape(h,w,1)
+		
+		overlay = self.img*adj_mask
+		return overlay
+
 	def newPxMask(self, mask, mask_name):
 		h,w,c = self.img.shape
 		self.masks[mask_name] = mask.ravel()
@@ -185,6 +199,8 @@ class MapOverlay:
 		del self.masks[old2]
 		self.newPxMask((old_mask1+old_mask2 > 0), new)
 	
+
+
 	def newMask(self, shape_fn, mask_name):
 		''' 
 		INPUT: 
@@ -194,8 +210,7 @@ class MapOverlay:
 				 Where the shapes cover and '0' in all other locations.
 				 Additionally adds the mask to the map dictionary
 		'''
-		dataSource, _ =  self._projectShape(shape_fn, mask_name)
-
+		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
 
 		layer = dataSource.GetLayer()
 		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
@@ -215,6 +230,7 @@ class MapOverlay:
 		geotransform=(lat_min,xres,0,lon_max,0, -yres)
 		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
 		dst_ds.SetGeoTransform(geotransform)
+		padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
 
 		band = dst_ds.GetRasterBand(1) #Initialize with 1 band
 		band.Fill(0) #initialise raster with zeros
@@ -222,134 +238,67 @@ class MapOverlay:
 		band.FlushCache()
 
 		gdal.RasterizeLayer(dst_ds, [1], layer)#, options = ["ATTRIBUTE=ID"])
-		
 
 		mask = dst_ds.GetRasterBand(1).ReadAsArray()
-		mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
+		mask = np.pad(mask, padding, mode = 'constant', constant_values = 0)
 		
 		mask = np.fliplr(mask)
 		mask = mask>0
 		self.masks[mask_name] = mask.ravel()
 
-	def new_segmentation(self, shape_fn, seg_level, predictions):
-		mask_name = str(seg_level)
-		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
-		layer = dataSource.GetLayer()
-		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+	def new_segmentation(self, shape_fn, mask_name = 'segments'):
 
-		maxx, miny = self.latlonToPx(lat_min,lon_max)
-		minx, maxy = self.latlonToPx(lat_max,lon_min)
-		nrows = min(maxy-miny, self.rows)
-		ncols = min(maxx-minx, self.cols)
-		minx = max(0, minx)
-		miny = max(0, miny)
-		maxx = min(maxx, self.cols)
-		maxy = min(maxy, self.rows)
+		name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
+		p = os.path.join('processed_segments', "{}.npy".format(name))
+		self.segment_name = name
+		if os.path.exists(p):
+			self.segmentation =  np.load(p)
+		else:
+			dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
 
-		xres=(lat_max-lat_min)/float(maxx-minx)
-		yres=(lon_max-lon_min)/float(maxy-miny)
+			layer = dataSource.GetLayer()
+			lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
 
-		geotransform=(lat_min,xres,0,lon_max,0, -yres)
-		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
-		dst_ds.SetGeoTransform(geotransform)
+			maxx, miny = self.latlonToPx(lat_min,lon_max)
+			minx, maxy = self.latlonToPx(lat_max,lon_min)
+			nrows = min(maxy-miny, self.rows)
+			ncols = min(maxx-minx, self.cols)
+			minx = max(0, minx)
+			miny = max(0, miny)
+			maxx = min(maxx, self.cols)
+			maxy = min(maxy, self.rows)
 
-		nfeatures = layer.GetFeatureCount()
-		print(nfeatures)
-		print("starting map segmentation reading")
-		full_mask = np.zeros((self.rows, self.cols))
-		for i in range(nfeatures):
-			if i % 10 == 0:
-				print i
-			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
-			band.Fill(0) #initialise raster with zeros
-			band.SetNoDataValue(0)
-			band.FlushCache()
-			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
-			feature = layer.GetFeature(i)
-			new_layer.CreateFeature(feature)
-			layer.DeleteFeature(i)
-			gdal.RasterizeLayer(dst_ds, [1], new_layer)
-			mask = dst_ds.GetRasterBand(1).ReadAsArray()
-			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
-			mask = np.fliplr(mask)
-			mask = mask>0
-			feature.Destroy()
-			full_mask += mask*i
-			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
-		print("finished map segmentation reading")
-		dataSource.Destroy()
+			xres=(lat_max-lat_min)/float(maxx-minx)
+			yres=(lon_max-lon_min)/float(maxy-miny)
 
-	def label_segments(self, shape_fn, mask_name, predictions):
-	
-		dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
+			geotransform=(lat_min,xres,0,lon_max,0, -yres)
+			dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
+			dst_ds.SetGeoTransform(geotransform)
+			padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
 
-
-		layer = dataSource.GetLayer()
-
-		
-
-		lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
-
-		maxx, miny = self.latlonToPx(lat_min,lon_max)
-		minx, maxy = self.latlonToPx(lat_max,lon_min)
-		nrows = min(maxy-miny, self.rows)
-		ncols = min(maxx-minx, self.cols)
-		minx = max(0, minx)
-		miny = max(0, miny)
-		maxx = min(maxx, self.cols)
-		maxy = min(maxy, self.rows)
-
-		xres=(lat_max-lat_min)/float(maxx-minx)
-		yres=(lon_max-lon_min)/float(maxy-miny)
-
-		geotransform=(lat_min,xres,0,lon_max,0, -yres)
-		dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
-		dst_ds.SetGeoTransform(geotransform)
-
-		nfeatures = layer.GetFeatureCount()
-		print(nfeatures)
-		print("starting map segmentation reading")
-		full_mask = np.zeros((self.rows, self.cols))
-		for i in range(nfeatures):
-			if i % 10 == 0:
-				print i
-			band = dst_ds.GetRasterBand(1) #Initialize with 1 band
-			band.Fill(0) #initialise raster with zeros
-			band.SetNoDataValue(0)
-			band.FlushCache()
-			new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
-			#print(dataSource)
-			feature = layer.GetFeature(i)
-			new_layer.CreateFeature(feature)
-			layer.DeleteFeature(i)
-			gdal.RasterizeLayer(dst_ds, [1], new_layer)#, options = ["ATTRIBUTE=ID"])
-			mask = dst_ds.GetRasterBand(1).ReadAsArray()
-			mask = np.pad(mask, ((miny, self.rows - maxy),(self.cols-maxx,minx)), mode = 'constant', constant_values = 0)
-			mask = np.fliplr(mask)
-			mask = mask>0
-			feature.Destroy()
-			new_mask = np.logical_and(predictions, mask)
-			fraction = float(np.sum(new_mask))/np.sum(mask)
-			
-			full_mask += mask*fraction
-			dataSource.DeleteLayer("{}_{}".format(mask_name,i))
-		print("finished map segmentation reading")
-		dataSource.Destroy()
-
-
-		fig = plt.figure()
-		fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-		np.savetxt('temp/segments_100.csv', full_mask, delimiter = ',')
-		plt.subplot(121),plt.imshow(self.maskImg('damage'))
-		plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-		plt.subplot(122)
-		probs = plt.imshow(full_mask, cmap = 'gray')
-		plt.title('Segment Probability'), plt.xticks([]), plt.yticks([])
-		fig.subplots_adjust(right=0.9)
-		cbar_ax = fig.add_axes([0.91, 0.3, 0.03, 0.4])
-		fig.colorbar(probs, cax=cbar_ax)
-		print('saving')
-		fig.savefig('temp/segements.png', format='png', dpi=1200)
-		print('done saving')
-
-		plt.show()
+			nfeatures = layer.GetFeatureCount()
+			print(nfeatures)
+			print("starting map segmentation reading")
+			full_mask = np.zeros((self.rows, self.cols))
+			pbar = custom_progress()
+			for i in pbar(range(nfeatures)):
+				band = dst_ds.GetRasterBand(1) #Initialize with 1 band
+				band.Fill(0) #initialise raster with zeros
+				band.SetNoDataValue(0)
+				band.FlushCache()
+				new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
+				feature = layer.GetFeature(i)
+				new_layer.CreateFeature(feature)
+				layer.DeleteFeature(i)
+				gdal.RasterizeLayer(dst_ds, [1], new_layer)
+				mask = dst_ds.GetRasterBand(1).ReadAsArray()
+				mask = np.pad(mask, padding, mode = 'constant', constant_values = 0)
+				mask = np.fliplr(mask)
+				mask = mask>0
+				feature.Destroy()
+				full_mask += mask*i
+				dataSource.DeleteLayer("{}_{}".format(mask_name,i))
+			print("finished map segmentation reading")
+			dataSource.Destroy()
+			self.segmentation = full_mask
+			np.save(p, self.segmentation)
