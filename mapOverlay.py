@@ -24,6 +24,7 @@ class MapOverlay:
 	'''
 	def __init__(self, map_fn):
 		self.masks = {}
+		self.segmentations = {}
 		self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
 		driver = gdal.GetDriverByName('HFA')
 		driver.Register()
@@ -179,13 +180,15 @@ class MapOverlay:
 		overlay = self.img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
 		return overlay
 
-	def mask_segments(self, i):
-		mask = np.in1d(self.segmentation,np.where(i))
-		h,w = self.rows, self.cols
-		adj_mask = np.logical_not(mask).reshape(h,w,1)
-		
-		overlay = self.img*adj_mask
-		return overlay
+	def mask_segments(self, i, level, with_img = True):
+		mask = np.in1d(self.segmentations[level][1],np.where(i))
+		if with_img:
+			h,w = self.rows, self.cols
+			adj_mask = np.logical_not(mask).reshape(h,w,1)
+			overlay = self.img*adj_mask
+			return overlay
+		else:
+			return mask
 
 	def newPxMask(self, mask, mask_name):
 		h,w,c = self.img.shape
@@ -246,13 +249,13 @@ class MapOverlay:
 		mask = mask>0
 		self.masks[mask_name] = mask.ravel()
 
-	def new_segmentation(self, shape_fn, mask_name = 'segments'):
+	def new_segmentation(self, shape_fn, level, mask_name = 'segments'):
 
 		name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
 		p = os.path.join('processed_segments', "{}.npy".format(name))
-		self.segment_name = name
+		#self.segment_name = name
 		if os.path.exists(p):
-			self.segmentation =  np.load(p)
+			self.segmentations[level] =  (name,np.load(p))
 		else:
 			dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
 
@@ -300,5 +303,5 @@ class MapOverlay:
 				dataSource.DeleteLayer("{}_{}".format(mask_name,i))
 			print("finished map segmentation reading")
 			dataSource.Destroy()
-			self.segmentation = full_mask
-			np.save(p, self.segmentation)
+			self.segmentations[level] = (name,full_mask)
+			np.save(p, full_mask)

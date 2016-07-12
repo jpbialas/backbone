@@ -58,12 +58,12 @@ def prec_recall(label, prediction, lower_limit = 0):
 	prediction = prediction > lower_limit
 
 	conf = confusion_matrix(label, prediction)
-	print conf.shape
+	#print conf.shape
 	TP = conf[1,1]
 	FP = conf[0,1]
 	TN = conf[0,0]
 	FN = conf[1,0]
-	print TP,FP,TN,FN
+	#print TP,FP,TN,FN
 
 	precision = 0 if TP+FP == 0 else float(TP)/(TP+FP)
 	recall = 0 if TP+FN == 0 else float(TP)/(TP+FN)
