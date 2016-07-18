@@ -70,7 +70,7 @@ def prec_recall(label, prediction, lower_limit = 0):
 	accuracy = 0 if (TP+FN+TN+FP) == 0 else float(TP + TN)/(TP+FN+TN+FP)
 	f1 = 0 if precision+recall == 0 else float(2*precision*recall)/(precision+recall)
 
-	return precision, recall, accuracy, f1
+	return FP, FN, precision, recall, accuracy, f1
 
 
 def test_thresholds():
@@ -121,7 +121,15 @@ def side_by_side(myMap, mask_true, mask_predict):
 	plt.subplot(122),plt.imshow(myMap.maskImg(mask_predict))
 	plt.title('Predicted Image'), plt.xticks([]), plt.yticks([])
 	fig.savefig('temp/comparison.png', format='png', dpi=1200)
-	plt.show()
+
+def probabilty_heat_map(map_test, full_predict):
+	fig = plt.figure()
+	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+	ground_truth = map_test.getLabels('damage')
+	plt.contour(ground_truth.reshape(map_test.rows, map_test.cols), colors = 'green')
+	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'Reds')
+	plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
+
 
 def feature_importance(model, labels, X):
 	'''

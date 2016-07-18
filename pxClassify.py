@@ -5,6 +5,12 @@ from sklearn.ensemble import RandomForestClassifier
 import features
 import matplotlib.pyplot as plt
 import analyzeResults
+import os
+from progressbar import ProgressBar
+import progressbar
+
+def custom_progress():
+	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 def v_print(myStr, verbose):
@@ -67,155 +73,106 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
 	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
 	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
+	glcm , glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
 	v_print('Concatenating', False)
-	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
-	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
+	data = np.concatenate((rgb, ave_rgb, edges, hog, glcm), axis = 1)
+	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name, glcm_name))
 	v_print('Done Concatenating', False)
 	return data, names
 
 
 
-def predict_all(model, myMap, mask_name = 'damage', load = False, erode = False, verbose = True):
-	'''
-	INPUT:
-		- model:  (sklearn model) Trained sklearn model
-		- X: 	  (n x m array) containing the data that model is trained on
-		- fn: 	  (string) filename of base map image used for data generation
-		- [load]: (boolean) Optional paramater indicating whether or not to load a 
-						saved file named "predictions.csv" containing the model predictions
-		- [erode]: (boolean) Optional parameter indicating whether or not to reduce noise by eroding 
-						positive predictions not near other positive predictions
-
-	RESULT:
-		- Saves learned predictions to 'predictions.csv'
-		- Displays img with regions highlighted to represent learned data
-	'''
-	img = myMap.img
-	h,w,c = img.shape
-	X = gen_features(myMap, 100, 50, 16)[0]
-	#X = myMap.get_features()
-	y = myMap.getLabels(mask_name)
-
-	if not load:
-		v_print("Starting full prediction", verbose)
-		full_predict = model.predict(X).reshape(h,w)
-		v_print("Ending full prediction", verbose)
-		np.savetxt('temp/predictions.csv', full_predict, delimiter = ',', fmt = "%d")
-	else:
-		v_print("Loading prediction", verbose)
-		full_predict = np.loadtxt('temp/predictions.csv', delimiter = ',')
-		v_print("Done loading prediction", verbose)
-	if erode:
-		kernel = np.ones((5,5),np.uint8)
-		full_predict = cv2.erode(full_predict, kernel, iterations = 2)
-
-	myMap.newPxMask(full_predict.ravel(), 'damage_pred')
-
-	precision, recall, accuracy, f1 = analyzeResults.prec_recall_map(myMap, mask_name, 'damage_pred')
-	print("precision = {}".format(precision))
-	print("recall = {}".format(recall))
-	print("accuracy = {}".format(accuracy))
-	print("f1 = {}".format(f1))
-
-	analyzeResults.side_by_side(myMap, mask_name, 'damage_pred')
-
-
 def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
-	v_print('Starting train gen', verbose)
+	'''v_print('Starting train gen', verbose)
 	X_train, labels = gen_features(map_train, edge_k, hog_k, nbins)
 	v_print('Done train gen', verbose)
-
-	v_print('Starting test gen', verbose)
-	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
-	v_print('Done test gen', verbose)
-
 	y_train =  map_train.getLabels(mask_train)
 	n_train = y_train.shape[0]
-	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))#sample(y_train, int(n_train*frac_train))
-
-	y_test = map_test.getLabels(mask_test)
-	n_test = y_test.shape[0]
-	test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*frac_test))
+	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
 
 	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
 	model.fit(X_train[train], y_train[train])
 	v_print("Done Modelling", verbose)
 
+	'''
+	model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, verbose)
 
-	v_print("Starting Testing", verbose)
-	prediction = model.predict(X_test[test])
+
+	v_print('Starting test gen', verbose)
+	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
+	v_print('Done test gen', verbose)
+	y_test = map_test.getLabels(mask_test)
+	n_test = y_test.shape[0]
+	if frac_test<1:
+		test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*frac_test))
+	else:
+		test = np.arange(n_test)
+
 	ground_truth = y_test[test]
-	v_print("Done Testing", verbose)
-	precision, recall, accuracy, f1 = analyzeResults.prec_recall(ground_truth, prediction)
-	return precision, recall,  accuracy, f1,  model, X_test, y_test, labels
 
-def train_model(myMap, mask_name = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
-	'''
-	INPUT:
-		-fn: 		   (string) Filename of .tiff file containing map
-		-mask_names:   (string list) List of mask names associated with positive labelling
-		-[frac_train]: (float) Optional Fraction of total image to train data on
-		-[frac_test]:  (float) Optional Fraction of total image to test data on
-		-[edge_k]:     (int) Size of window used for edge density calculation
-		-[hog_k]       (int) Size of window used for HOG calculations
-		-[nbins]       (int) Number of bins used for HoG
-		-[n_tress]     (int) Number of trees used in random forest
-	OUTPUT:
-		Tuple Containing:
-			- (float) precision
-			- (float) recall
-			- (sklearn model) Trained sklearn model
-			- (ndarray) Data collected from .tiff file
-	'''
-	v_print('Starting gen', verbose)
-	X, labels = gen_features(myMap, edge_k, hog_k, nbins)
-	v_print('Ending gen', verbose)
+	prediction = model.predict_proba(X_test[test])[:,1]
+	if frac_test == 1:
+		analyzeResults.probabilty_heat_map(map_test, prediction)
+		prediction = prediction>.5
+		map_test.newPxMask(prediction.ravel(), 'damage_pred')
+		
+		print analyzeResults.prec_recall_map(map_test, 'damage', 'damage_pred')
+		analyzeResults.side_by_side(map_test, 'damage', 'damage_pred')
+	else:
+		v_print("Done Testing", verbose)
+		print analyzeResults.prec_recall(ground_truth, prediction)
+	return model, X_test, y_test, labels
 
-	y = myMap.getLabels(mask_name)
-	n = y.shape[0]
-	train, test = sample_split(y, int(n*frac_train), int(n*frac_test))
+
+
+def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
+	v_print('Starting train gen', verbose)
+	X_train, labels = gen_features(map_train, edge_k, hog_k, nbins)
+	v_print('Done train gen', verbose)
+
+	y_train =  map_train.getLabels(mask_train)
+	n_train = y_train.shape[0]
+	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
 
 	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
-	model.fit(X[train], y[train])
+	model.fit(X_train[train], y_train[train])
 	v_print("Done Modelling", verbose)
 
-	y_pred = model.predict(X[test])
-	y_true = y[test]
+	return model, labels, X_train
 
-	precision, recall, accuracy, f1 = analyzeResults.prec_recall(y_true, y_pred)
-	return precision, recall,  accuracy, f1,  model, X, y, labels
+def fit_to_segs(map_test, segs = 400, probabilities = None):
+	segs = map_test.segmentations[segs][1].ravel()
+	if probabilities is None:
+		probabilities = np.load(os.path.join('temp', "prediction.npy"))
+	pbar = custom_progress()
+	n_segs = int(np.max(segs))+1
+	data = np.zeros((n_segs), dtype = 'float')
+	for i in pbar(range(n_segs)):
+		indices = np.where(segs == i)[0]
+		data.itemset(i, np.sum(probabilities[indices], axis = 0)/indices.shape[0])
+	plt.imshow(data[segs.reshape(map_test.rows, map_test.cols).astype('int')], cmap = 'gray')
+	plt.show()
+
 
 
 if __name__ == "__main__":
+	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
+	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
+	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-400.shp', 400)
+	#fit_to_segs(map_train)
 	
-	fn1 = 'datafromjoe/1-0003-0002.tif'
-	mask_fn1 = 'datafromjoe/1-003-002-damage.shp'
-	fn2 = 'datafromjoe/1-0003-0003.tif'
-	mask_fn2 = 'datafromjoe/1-003-003-damage.shp'
+	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
+	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
 
-	myMap1 = MapOverlay(fn1)
-	myMap1.newMask(mask_fn1, 'damage')
-	myMap2 = MapOverlay(fn2)
-	myMap2.newMask(mask_fn2, 'damage')
+	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, verbose = True)
+	analyzeResults.feature_importance(model, names, X)
 
+	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, verbose = True)
+	analyzeResults.feature_importance(model, names, X)
 
-	'''precision, recall, accuracy, f1,  model, X, y, names = train_model(myMap1)
-	print("precision = {}".format(precision))
-	print("recall = {}".format(recall))
-	print("accuracy = {}".format(accuracy))
-	print("f1 = {}".format(f1))'''
-	precision, recall,  accuracy, f1,  model2, X, y, names = train_and_test(myMap1, myMap2, frac_train = .3, verbose = True)
-	print("precision = {}".format(precision))
-	print("recall = {}".format(recall))
-	print("accuracy = {}".format(accuracy))
-	print("f1 = {}".format(f1))
-	analyzeResults.feature_importance(model2, names, X)
-	
-
-	#predict_all(model, myMap2, 'damage')
-	predict_all(model2, myMap2, 'damage')
 	plt.show()
+
 	
 

@@ -6,7 +6,15 @@ from skimage.filters.rank import windowed_histogram
 from skimage.feature import greycomatrix, greycoprops
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
+from progressbar import ProgressBar
+import progressbar
 import os
+import time
+
+def custom_progress():
+	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+
+
 
 def edge_density(img, ksize, img_name = "", amp = 1):
 	'''
@@ -68,20 +76,28 @@ def mirror_border(img, border_width, border_height):
 
 
 def GLCM(img, k, img_name = ""):
+	h,w, = img.shape
 	p = os.path.join('features', "GLCM_{}_{}.npy".format(k,img_name))
 	if os.path.exists(p):
-		return np.load(p), np.array(['GLCM'])
+		new_img = np.load(p)
 	else:
 		mirror_img = mirror_border(img, k/2, k/2)
-		new_img = np.copy(img)
-		for i in range(k/2,img.shape[0]):
-			for j in range(k/2, img.shape[1]):
-				new_window = mirror_img[i-k/2: i+k/2+1, j-k/2: j+k/2+1]
-				glcm = greycomatrix(new_window, [1],[0], symmetric = True, normed = True)
-				contrast = greycoprops(glcm, 'contrast')
-				new_img[i-k/2,j] = contrast
+		new_img = np.zeros_like(img)
+		pbar = custom_progress()
+		gcm = greycomatrix
+		gcp = greycoprops
+		print h,w
+		total = (h-k/2)*(w-k/2)
+		
+		lset = new_img.itemset
+		for i in pbar(range(k/2,h)):
+			for j in range(k/2, w):
+				glcm = gcm(mirror_img[i-k/2: i+k/2+1, j-k/2: j+k/2+1], [1],[0], symmetric = True, normed = True)
+				contrast = gcp(glcm, 'contrast')
+				lset((i-k/2,j),contrast)
+		
 		np.save(p, new_img)
-		return new_img,np.array('GLCM')
+	return new_img.reshape(h*w,1),np.array(['GLCM'])
 
 
 
