@@ -7,14 +7,6 @@ import matplotlib.pyplot as plt
 import analyze_results
 
 
-def load_all():
-	for img_num in [2,3]:
-		new_map = MapOverlay('datafromjoe/1-0003-000{}.tif'.format(img_num))
-		for seg in [1000,400,200,100,50]:
-			new_map.new_segmentation('segmentations/withfeatures{}/shapefilewithfeatures003-00{}-{}.shp'.format(img_num, img_num, seg), seg)
-			sf.shapes(new_map, seg)
-			plt.show()
-
 def visualize(img_num, seg_level):
 	new_map = MapOverlay('datafromjoe/1-0003-000{}.tif'.format(img_num))
 	new_map.new_segmentation('segmentations/withfeatures{}/shapefilewithfeatures003-00{}-{}.shp'.format(img_num, img_num, seg_level), seg_level)
@@ -93,27 +85,6 @@ def test2(n_trees = 500, base_seg = 50, segs = [100, 400], thresh = .5):
 	full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
 	
 
-
-def test_and_train(n_trees = 85):
-	map2, X, y = setup_segs(2, 100)
-	train = np.arange(n/2)
-	test = np.arange(n/2,n)
-	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
-	print('fitting')
-	model.fit(X[train], y[train]) 
-	print('predicting')
-	prediction = model.predict(X[test])
-	truth = y[test]
-	print analyzeResults.prec_recall(truth, prediction)
-	img = map2.mask_segments(np.concatenate((y[train], prediction)))
-	plt.figure('full')
-	plt.imshow(img)
-	plt.figure('trained')
-	plt.imshow(map2.mask_segments(y[train]))
-	plt.figure('true')
-	plt.imshow(map2.mask_segments(y))
-	plt.show()
-
 if __name__ == '__main__':
 	#cache_all()
 	#for i in range(10):
@@ -125,4 +96,3 @@ if __name__ == '__main__':
 			visualize(i, j)
 			plt.show(block = False)'''
 	#load_all()
-	#test_and_train()

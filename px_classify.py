@@ -11,6 +11,7 @@ from convenience_tools import *
 
 def sample(labels, nsamples):
 	'''
+	NOW UNUSED
 	INPUT: 
 		- labels:   (nx1 ndarray) Array containing binary labels
 		- nsamples: (int) Value representingtotal number of indices to be sampled
@@ -35,6 +36,7 @@ def sample(labels, nsamples):
 
 def sample_split(labels, nsamples_train, nsamples_test):
 	'''
+	NOW UNUSED
 	INPUT: 
 		- labels:   (nx1 ndarray) Array containing binary labels
 		- nsamples: (int) Value representingtotal number of indices to be sampled
@@ -65,7 +67,6 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
 	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
 	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
-	#glcm , glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
 	v_print('Concatenating', False)
 	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
 	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
