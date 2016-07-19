@@ -59,11 +59,12 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 	else:
 		model.fit(X_train, y_train)
 
+	ground_truth = y_test
+
 	if CUSTOM:
 		prediction = model.predict_proba(X_test)[:,1]
 		full_predict = prediction[map_test.segmentations[base_seg][1].astype('int')]
 		analyzeResults.probability_heat_map(map_test, full_predict)
-		plt.show()
 		prediction = prediction>.4
 		full_predict = (full_predict>.4).ravel()
 		'''for i in range(10):
@@ -76,21 +77,21 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 		map_test.newPxMask(full_predict.ravel(), 'damage_pred')
 		analyzeResults.side_by_side(map_test, 'damage', 'damage_pred')
 
-	#analyzeResults.feature_importance(model, names, X_train)
+	analyzeResults.feature_importance(model, names, X_train)
 	print full_predict.shape, ground_truth.shape
-	#print "pred",analyzeResults.prec_recall(map_test.getLabels('damage'), full_predict)
-	#print "truth",analyzeResults.prec_recall(map_test.getLabels('damage'), map_test.mask_segments(y_test, base_seg, False))
+	print "pred",analyzeResults.prec_recall(map_test.getLabels('damage'), full_predict)
+	print "truth",analyzeResults.prec_recall(map_test.getLabels('damage'), map_test.mask_segments(y_test, base_seg, False))
 	
 
 def test2(n_trees = 500, base_seg = 50, segs = [100, 400], thresh = .5):
 	map_train, X_train, y_train, names = setup_segs(2, base_seg, segs, thresh)
 	map_test, X_test, y_test, _ = setup_segs(3, base_seg, segs,  thresh)
-	plt.show()
+	
 	print("2,3")
 	full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees)
 	print("3,2")
 	full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
-	plt.show()
+	
 
 
 def test_and_train(n_trees = 85):
@@ -118,6 +119,7 @@ if __name__ == '__main__':
 	#for i in range(10):
 	#	print(i/10.0)
 	test2()
+	plt.show()
 	'''for i in [2,3]:
 		for j in [50,100,200,400,1000]:
 			visualize(i, j)
