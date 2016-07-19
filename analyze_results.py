@@ -3,11 +3,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import cv2
 import matplotlib.pyplot as plt
-import progressbar
-
-def custom_progress():
-	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
-
+from convenience_tools import *
 
 
 def prec_recall_map(myMap, mask_true, mask_predict):

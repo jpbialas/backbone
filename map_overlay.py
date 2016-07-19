@@ -4,11 +4,7 @@ import sys
 import numpy as np
 from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
-import progressbar
-
-def custom_progress():
-	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
-
+from convenience_tools import *
 
 class MapOverlay:
 

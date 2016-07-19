@@ -9,10 +9,7 @@ from skimage.morphology import disk
 import progressbar
 import os
 import time
-
-def custom_progress():
-	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
-
+from convenience_tools import *
 
 
 def edge_density(img, ksize, img_name = "", amp = 1):

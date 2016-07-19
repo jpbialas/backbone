@@ -7,14 +7,7 @@ import matplotlib.pyplot as plt
 import analyze_results
 import os
 import progressbar
-
-def custom_progress():
-	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
-
-
-def v_print(myStr, verbose):
-	if verbose:
-		print(myStr)
+from convenience_tools import *
 
 def sample(labels, nsamples):
 	'''
