@@ -60,13 +60,13 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 	output:
 		- feature representation of map
 	'''
-	#entropy, entropy_name = features.entr(myMap.bw_img, img_name = myMap.name)
+	#entropy, entropy_name = px_features.entr(myMap.bw_img, img_name = myMap.name)
 
-	#glcm, glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
-	rgb, rgb_name = features.normalized(myMap.getMapData(), img_name = myMap.name)
-	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
-	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
-	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
+	#glcm, glcm_name = px_features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
+	rgb, rgb_name = px_features.normalized(myMap.getMapData(), img_name = myMap.name)
+	ave_rgb, ave_rgb_name = px_features.blurred(myMap.img, img_name = myMap.name)
+	edges, edges_name = px_features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
+	hog, hog_name = px_features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
 	v_print('Concatenating', False)
 	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
 	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
@@ -76,25 +76,14 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 
 
 def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
-	'''v_print('Starting train gen', verbose)
-	X_train, labels = gen_features(map_train, edge_k, hog_k, nbins)
-	v_print('Done train gen', verbose)
-	y_train =  map_train.getLabels(mask_train)
-	n_train = y_train.shape[0]
-	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
-
-	v_print("Starting Modelling", verbose)
-	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
-	model.fit(X_train[train], y_train[train])
-	v_print("Done Modelling", verbose)
-
-	'''
 	model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, verbose)
+	return test(map_test, model, labels, mask_test, edge_k, hog_k, nbins, n_trees, verbose)
 
-
+def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
 	v_print('Starting test gen', verbose)
 	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
 	v_print('Done test gen', verbose)
+	print mask_test
 	y_test = map_test.getLabels(mask_test)
 	n_test = y_test.shape[0]
 	if frac_test<1:
@@ -107,19 +96,17 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 	prediction = model.predict_proba(X_test[test])[:,1]
 	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction)
 	if frac_test == 1:
-		analyzeResults.probabilty_heat_map(map_test, prediction)
+		analyze_results.probabilty_heat_map(map_test, prediction)
 		prediction = prediction>.5
 		map_test.newPxMask(prediction.ravel(), 'damage_pred')
 		
-		print analyzeResults.prec_recall_map(map_test, 'damage', 'damage_pred')
-		analyzeResults.side_by_side(map_test, 'damage', 'damage_pred')
+		print analyze_results.prec_recall_map(map_test, 'damage', 'damage_pred')
+		analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
 	else:
 		v_print("Done Testing", verbose)
-		print analyzeResults.prec_recall(ground_truth, prediction)
+		print analyze_results.prec_recall(ground_truth, prediction)
 
-	return model, X_test, y_test, labels
-
-
+	return model, X_test, y_test, labels	
 
 def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
 	v_print('Starting train gen', verbose)
@@ -149,21 +136,19 @@ def fit_to_segs(map_test, segs = 50, probabilities = None):
 		indices = np.where(segs == i)[0]
 		data.itemset(i, np.sum(probabilities[indices], axis = 0)/indices.shape[0])
 	probs = data[segs.reshape(map_test.rows, map_test.cols).astype('int')]
-	analyzeResults.probabilty_heat_map(map_test, probs)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.1)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.15)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.2)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.25)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.3)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.35)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.4)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.45)
-	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.5)
+	analyze_results.probabilty_heat_map(map_test, probs)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.1)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.15)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.2)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.25)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.3)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.35)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.4)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.45)
+	print analyze_results.prec_recall(ground_truth, probs.ravel()>.5)
 	
 
-
-
-if __name__ == "__main__":
+def main_test():
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
 	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
 	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-50.shp', 50)
@@ -172,18 +157,22 @@ if __name__ == "__main__":
 	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
 	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-50.shp', 50)
 
-	fit_to_segs(map_test)
-	fit_to_segs(map_train)
-	plt.show()
+	#fit_to_segs(map_test)
+	#fit_to_segs(map_train)
+	#plt.show()
 
 	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, verbose = True)
-	analyzeResults.feature_importance(model, names, X)
-
+	analyze_results.feature_importance(model, names, X)
+	plt.show()
 
 	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, verbose = True)
-	analyzeResults.feature_importance(model, names, X)
+	analyze_results.feature_importance(model, names, X)
 
 	plt.show()
+
+if __name__ == "__main__":
+	main_test()
+
 
 	
 
