@@ -6,13 +6,12 @@ from skimage.filters.rank import windowed_histogram
 from skimage.feature import greycomatrix, greycoprops
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
-from progressbar import ProgressBar
 import progressbar
 import os
 import time
 
 def custom_progress():
-	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 

@@ -2,16 +2,12 @@ import matplotlib.pyplot as plt
 import cv2
 import sys
 import numpy as np
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr #For shapefile
+from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
-from osgeo import gdal, gdalconst #For Raster
-from progressbar import ProgressBar
 import progressbar
 
 def custom_progress():
-	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 class MapOverlay:

@@ -1,16 +1,15 @@
-from mapOverlay import MapOverlay
+from map_overlay import MapOverlay
 import numpy as np
 import cv2
 from sklearn.ensemble import RandomForestClassifier
 import px_features
 import matplotlib.pyplot as plt
-import analyzeResults
+import analyze_results
 import os
-from progressbar import ProgressBar
 import progressbar
 
 def custom_progress():
-	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 def v_print(myStr, verbose):

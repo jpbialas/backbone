@@ -1,12 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-from progressbar import ProgressBar
 import progressbar
 import os
 
 def custom_progress():
-	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 def color_edge(my_map, segs):

@@ -3,11 +3,10 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import cv2
 import matplotlib.pyplot as plt
-from progressbar import ProgressBar
 import progressbar
 
 def custom_progress():
-	return ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
 
 
