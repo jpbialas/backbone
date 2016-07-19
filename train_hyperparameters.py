@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-from mapOverlay import MapOverlay
-import analyzeResults
-import pxClassify as clas
+from map_overlay import MapOverlay
+import analyze_results
+import px_classify as clas
 import pathos.multiprocessing as mp
 
 

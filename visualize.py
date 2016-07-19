@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import features
-from mapOverlay import MapOverlay
+from map_overlay import MapOverlay
 
 def vis():
 	fn = 'jpl-data/clipped-image.tif'

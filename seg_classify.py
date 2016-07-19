@@ -1,10 +1,10 @@
-from mapOverlay import MapOverlay
+from map_overlay import MapOverlay
 import numpy as np
 import cv2
 from sklearn.ensemble import RandomForestClassifier
-import segment_features as sf
+import seg_features as sf
 import matplotlib.pyplot as plt
-import analyzeResults
+import analyze_results
 
 
 def load_all():

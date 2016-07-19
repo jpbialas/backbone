@@ -2,10 +2,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import features
-import pxClassify
-from pxClassify import gen_features
-from mapOverlay import MapOverlay
+import px_classify
+from px_classify import gen_features
+from map_overlay import MapOverlay
 from mpl_toolkits.mplot3d import Axes3D
 from tsne import tsne
 from sklearn.decomposition import PCA
