@@ -122,12 +122,12 @@ def side_by_side(myMap, mask_true, mask_predict):
 	plt.title('Predicted Image'), plt.xticks([]), plt.yticks([])
 	fig.savefig('temp/comparison.png', format='png', dpi=1200)
 
-def probabilty_heat_map(map_test, full_predict):
+def probability_heat_map(map_test, full_predict):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	ground_truth = map_test.getLabels('damage')
 	plt.contour(ground_truth.reshape(map_test.rows, map_test.cols), colors = 'green')
-	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'Reds')
+	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic')
 	plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
 
 

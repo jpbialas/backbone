@@ -73,10 +73,10 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 	ave_rgb, ave_rgb_name = features.blurred(myMap.img, img_name = myMap.name)
 	edges, edges_name = features.edge_density(myMap.bw_img, edge_k, img_name = myMap.name, amp = 1)
 	hog, hog_name = features.hog(myMap.bw_img, hog_k, img_name = myMap.name)
-	glcm , glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
+	#glcm , glcm_name = features.GLCM(myMap.bw_img, 50, img_name = myMap.name)
 	v_print('Concatenating', False)
-	data = np.concatenate((rgb, ave_rgb, edges, hog, glcm), axis = 1)
-	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name, glcm_name))
+	data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
+	names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
 	v_print('Done Concatenating', False)
 	return data, names
 
@@ -112,6 +112,7 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 	ground_truth = y_test[test]
 
 	prediction = model.predict_proba(X_test[test])[:,1]
+	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction)
 	if frac_test == 1:
 		analyzeResults.probabilty_heat_map(map_test, prediction)
 		prediction = prediction>.5
@@ -122,6 +123,7 @@ def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'dama
 	else:
 		v_print("Done Testing", verbose)
 		print analyzeResults.prec_recall(ground_truth, prediction)
+
 	return model, X_test, y_test, labels
 
 
@@ -142,32 +144,48 @@ def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog
 
 	return model, labels, X_train
 
-def fit_to_segs(map_test, segs = 400, probabilities = None):
+def fit_to_segs(map_test, segs = 50, probabilities = None):
 	segs = map_test.segmentations[segs][1].ravel()
+	ground_truth = map_test.getLabels('damage')
 	if probabilities is None:
-		probabilities = np.load(os.path.join('temp', "prediction.npy"))
+		probabilities = np.load(os.path.join('temp', "prediction_{}.npy".format(map_test.name)))
 	pbar = custom_progress()
 	n_segs = int(np.max(segs))+1
 	data = np.zeros((n_segs), dtype = 'float')
 	for i in pbar(range(n_segs)):
 		indices = np.where(segs == i)[0]
 		data.itemset(i, np.sum(probabilities[indices], axis = 0)/indices.shape[0])
-	plt.imshow(data[segs.reshape(map_test.rows, map_test.cols).astype('int')], cmap = 'gray')
-	plt.show()
+	probs = data[segs.reshape(map_test.rows, map_test.cols).astype('int')]
+	analyzeResults.probabilty_heat_map(map_test, probs)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.1)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.15)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.2)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.25)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.3)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.35)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.4)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.45)
+	print analyzeResults.prec_recall(ground_truth, probs.ravel()>.5)
+	
 
 
 
 if __name__ == "__main__":
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
 	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
-	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-400.shp', 400)
-	#fit_to_segs(map_train)
+	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-50.shp', 50)
 	
 	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
 	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
+	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-50.shp', 50)
+
+	fit_to_segs(map_test)
+	fit_to_segs(map_train)
+	plt.show()
 
 	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, verbose = True)
 	analyzeResults.feature_importance(model, names, X)
+
 
 	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, verbose = True)
 	analyzeResults.feature_importance(model, names, X)
