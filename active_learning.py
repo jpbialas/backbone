@@ -3,6 +3,7 @@ import px_features
 import analyze_results
 import map_overlay
 from convenience_tools import *
+import os
 import px_classify
 from sklearn.ensemble import RandomForestClassifier
 
@@ -76,10 +77,9 @@ def test_progress(X_train, X_test, y_train, y_test, indices, verbose = True):
 def run_active_learning(map_train, map_test, start_n, step_n, verbose = True):
 	v_print('generating features', verbose)
 	X_train, _ = px_classify.gen_features(map_train, 100, 50, 16)
+	#np.save(os.path.join('temp', "train.npy"), X_train)
 	X_test, _ = px_classify.gen_features(map_test, 100, 50, 16)
-
-	np.save(X_train, "temp/train.npy")
-	np.save(X_train, "temp/test.npy")
+	#np.save(os.path.join("temp","test.npy"), X_test)
 
 	v_print('done generating features', verbose)
 	y_train = map_train.getLabels('damage')
