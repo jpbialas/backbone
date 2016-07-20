@@ -6,6 +6,19 @@ from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
 from convenience_tools import *
 
+def basic_setup(segs = []):
+	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
+	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
+	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
+	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
+
+	for seg in segs:
+		map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
+		map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(seg), seg)
+
+	return map_train, map_test
+
+
 class MapOverlay:
 
 	'''

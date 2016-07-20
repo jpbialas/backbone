@@ -39,11 +39,11 @@ def sample(y):
 	return np.concatenate((zero_samples, one_samples))
 
 
-def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees):
+def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, verbose = True):
 	CUSTOM = True
 	EVEN = False
 
-	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
+	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1, verbose = verbose)
 	samples = sample(y_train)
 
 	if EVEN:

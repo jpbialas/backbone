@@ -6,3 +6,4 @@ def v_print(myStr, verbose):
 
 def custom_progress():
 	return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
+

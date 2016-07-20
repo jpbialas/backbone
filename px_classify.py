@@ -1,4 +1,5 @@
 from map_overlay import MapOverlay
+import map_overlay
 import numpy as np
 import cv2
 from sklearn.ensemble import RandomForestClassifier
@@ -118,11 +119,12 @@ def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog
 	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
 
 	v_print("Starting Modelling", verbose)
-	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1)
+	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1, verbose = verbose)
 	model.fit(X_train[train], y_train[train])
 	v_print("Done Modelling", verbose)
 
 	return model, labels, X_train
+
 
 def fit_to_segs(map_test, segs = 50, probabilities = None):
 	segs = map_test.segmentations[segs][1].ravel()
@@ -149,14 +151,7 @@ def fit_to_segs(map_test, segs = 50, probabilities = None):
 	
 
 def main_test():
-	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
-	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
-	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-50.shp', 50)
-	
-	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
-	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
-	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-50.shp', 50)
-
+	map_train, map_test = map_overlay.basic_setup([50])
 	#fit_to_segs(map_test)
 	#fit_to_segs(map_train)
 	#plt.show()
