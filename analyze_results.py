@@ -65,7 +65,7 @@ def prec_recall(label, prediction, lower_limit = 0):
 	accuracy = 0 if (TP+FN+TN+FP) == 0 else float(TP + TN)/(TP+FN+TN+FP)
 	f1 = 0 if precision+recall == 0 else float(2*precision*recall)/(precision+recall)
 
-	return FP, FN, precision, recall, accuracy, f1
+	return round(precision, 5), round(recall, 5), round(accuracy, 5), round(f1, 5)
 
 
 def test_thresholds():
