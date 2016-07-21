@@ -44,9 +44,6 @@ def draw_segment_analysis(my_map, labels):
 
 	return img
 
-FPR = FP/(FP+TN)
-FNR = 1-recall
-
 
 def confusion_analytics(y_true, y_pred):
 	conf = confusion_matrix(y_true, y_pred)
@@ -55,7 +52,7 @@ def confusion_analytics(y_true, y_pred):
 	TN = conf[0,0]
 	FN = conf[1,0]
 	recall = metrics.recall_score(y_true, y_pred)
-	FPR = FP/(FP+TN)
+	FPR = float(FP)/(FP+TN)
 	FNR = 1-recall
 	return round(FPR,5), round(FNR, 5), conf
 

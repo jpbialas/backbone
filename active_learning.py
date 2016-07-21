@@ -73,18 +73,25 @@ def trivial_error(X, y, m, frac_test = 1.0, verbose = True):
 		return unlabelled[:m]
 
 
-def test_seg_progress(map_test, base_seg, X_train, X_test, y_train, indices, precision, recall, f1, verbose = True):
+def test_seg_progress(map_test, base_seg, X_train, X_test, y_train, indices, FPRs, FNRs, Confs, verbose = True):
+	'''
+	Trains X_train on y_train and tests on X_test. Adds resulting FPR, FNR, and Conf to FPRs, FNRs, and Confs
+	'''
 	model = RandomForestClassifier(n_estimators = 500, n_jobs = -1, verbose = 0)
 	model.fit(X_train[indices], y_train[indices])
 	prediction = model.predict_proba(X_test)[:,1]>0.4
 	full_predict = map_test.mask_segments(prediction, base_seg, False)
 	map_test.newPxMask(full_predict.ravel(), 'damage_pred')
-	prec, rec, _, _f1 = analyze_results.prec_recall(map_test.getLabels('damage'), full_predict)
-	precision.append(prec)
-	recall.append(rec)
-	f1.append(_f1)
+	FPR, FNR, conf = analyze_results.confusion_analytics(map_test.getLabels('damage'), full_predict)
+	FPRs.append(FPR)
+	FNRs.append(FNR)
+	Confs.append(conf)
 
 def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 100, method = "UNCERT", train = 3, verbose = True):
+	'''
+	Runs active learning on train, and tests on the other map. Starts with start_n labels, and increments by step_n size batches.
+	If method is UNCERT, picks new indices with bootstrap Uncertainty, with a bootstrap size of boot_n.
+	'''
 	base_seg = 50
 
 	if method == "UNCERT":
@@ -104,48 +111,44 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 	map_train, X_train, y_train, names = sc.setup_segs(3, base_seg, [100, 400],.5)
 	map_test, X_test, y_test, _ = sc.setup_segs(2,base_seg, [100,400],  .5)
 
+	# Initial sample of labelled data
 	sample = np.random.choice(np.arange(y_train.shape[0]), start_n, replace = False)
 	random_sample = sample.copy()
 
 	y = np.ones_like(y_train)*-1
 	y[sample] = y_train[sample]
-	precision, recall, f1 = [],[],[]
-	prec_r, rec_r, f1_r = [],[],[]
-	full_prec, full_rec, full_f = [],[],[]
-	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, sample, precision, recall, f1)
-	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, random_sample, prec_r, rec_r, f1_r)
-	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, np.arange(y_train.shape[0]), full_prec, full_rec, full_f)
+	FPR, FNR, conf = [],[],[]
+	FPR_r, FNR_r, conf_r = [],[],[]
+	full_FPR, full_FNR= [],[]
+	#Initial results from only initial samples
+	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, sample, FPR, FNR, conf)
+	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, random_sample, FPR_r, FNR_r, conf_r)
+	#Calculates heuristics for full labelling(Convergence Value)
+	test_seg_progress(map_test, base_seg, X_train, X_test, y_train, np.arange(y_train.shape[0]), full_FPR, full_FNR, [])
 	
 	plt.ion()
-	prec_comparisons = plt.figure('Precision')
-	graph_prec = plt.plot(X_axis, precision, 'r-', label = legend_name)[0]
-	graph_p_r = plt.plot(X_axis, prec_r, 'r--', label = 'Random Selection')[0]
-	plt.axhline(full_prec[0], color = 'gray', label = 'Full Labelling')
+	#Sets up FPR chart
+	prec_comparisons = plt.figure('False Positive Rate')
+	graph_FPR = plt.plot(X_axis, FPR, 'r-', label = legend_name)[0]
+	graph_FPR_r = plt.plot(X_axis, FPR_r, 'r--', label = 'Random Selection')[0]
+	plt.axhline(full_FPR[0], color = 'gray', label = 'Full Labelling')
 	plt.axis([start_n, start_n+step_n*n_updates, 0, 1])
 	plt.legend()
-	plt.title('Precision AL Comparison')
+	plt.title('False Positive Rate AL Comparison')
 	plt.xlabel('Number of Labelled Samples')
-	plt.ylabel('Precision (%)')
+	plt.ylabel('FPR (%)')
 
-	rec_comparisons = plt.figure('Recall')
-	graph_rec = plt.plot(X_axis, recall, 'g-',label = legend_name)[0]
-	graph_r_r = plt.plot(X_axis, rec_r, 'g--', label = 'Random Selection')[0]
-	plt.axhline(full_rec[0], color = 'gray', label = 'Full Labelling')
+	#Sets up FNR chart
+	rec_comparisons = plt.figure('False Negative Rate')
+	graph_FNR = plt.plot(X_axis, FNR, 'g-',label = legend_name)[0]
+	graph_FNR_r = plt.plot(X_axis, FNR_r, 'g--', label = 'Random Selection')[0]
+	plt.axhline(full_FNR[0], color = 'gray', label = 'Full Labelling')
 	plt.axis([start_n, start_n+step_n*n_updates, 0, 1])
 	plt.legend()
-	plt.title('Recall AL Comparison')
+	plt.title('False Negative Rate AL Comparison')
 	plt.xlabel('Number of Labelled Samples')
-	plt.ylabel('Recall (%)')
+	plt.ylabel('FNR (%)')
 
-	F1_comparisons = plt.figure('F1')
-	graph_f1 = plt.plot(X_axis, f1, 'b-', label = legend_name)[0]
-	graph_f_r = plt.plot(X_axis, f1_r, 'b--', label = 'Random Selection')[0]
-	plt.axhline(full_f[0], color = 'gray', label = 'Full Labelling')
-	plt.axis([start_n, start_n+step_n*n_updates, 0, 1])
-	plt.legend()
-	plt.title('F1 AL Comparison')
-	plt.xlabel('Number of Labelled Samples')
-	plt.ylabel('F1 (%)')
 
 	plt.draw()
 	plt.pause(0.05)
@@ -155,30 +158,30 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 		X_axis.append(start_n+i*step_n)
 
 		print "there are", np.where(y >= 0)[0].shape[0], "labelled points"
+		#Uses AL method to find next sample indices
 		next_indices = uncertainty(X_train, y, boot_n, step_n)
 		#next_indices = trivial_error(X_train, y, step_n)
 		sample = np.concatenate((sample, next_indices))
 		y[sample] = y_train[sample]
+		#Update charts
 		random_sample = np.concatenate((random_sample, strawman_error(X_train, y, boot_n)))
-		test_seg_progress(map_test, base_seg, X_train, X_test, y_train, sample, precision, recall, f1)
-		test_seg_progress(map_test, base_seg, X_train, X_test, y_train, random_sample, prec_r, rec_r, f1_r)
-		graph_prec.set_ydata(precision)
-		graph_rec.set_ydata(recall)
-		graph_f1.set_ydata(f1)
-		graph_p_r.set_ydata(prec_r)
-		graph_r_r.set_ydata(rec_r)
-		graph_f_r.set_ydata(f1_r)
-		graph_prec.set_xdata(X_axis)
-		graph_rec.set_xdata(X_axis)
-		graph_f1.set_xdata(X_axis)
-		graph_p_r.set_xdata(X_axis)
-		graph_r_r.set_xdata(X_axis)
-		graph_f_r.set_xdata(X_axis)
+		test_seg_progress(map_test, base_seg, X_train, X_test, y_train, sample, FPR, FNR, conf)
+		test_seg_progress(map_test, base_seg, X_train, X_test, y_train, random_sample, FPR_r, FNR_r, conf_r)
+		graph_FPR.set_ydata(FPR)
+		graph_FPR.set_xdata(X_axis)
+		graph_FNR.set_ydata(FNR)
+		graph_FNR.set_xdata(X_axis)
+		graph_FPR_r.set_ydata(FPR)
+		graph_FPR_r.set_xdata(X_axis)
+		graph_FNR_r.set_ydata(FNR)
+		graph_FNR_r.set_xdata(X_axis)
 		plt.draw()
 		plt.pause(0.05)
-		prec_comparisons.savefig('temp/Precision {} {}.png'.format(legend_name, train))
-		rec_comparisons.savefig('temp/Recall {} {}.png'.format(legend_name, train))
-		F1_comparisons.savefig('temp/F1 {} {}.png'.format(legend_name, train))
+		#Save results for each iteration
+		prec_comparisons.savefig('temp/FPR {} {}.png'.format(legend_name, train))
+		rec_comparisons.savefig('temp/FNR {} {}.png'.format(legend_name, train))
+		np.save('temp/conf {} {}.npy'.format(legend_name, train), np.array(conf))
+		np.save('temp/conr random {}.npy'.format(train),np.array(conf_r))
 
 	plt.waitforbuttonpress()
 
