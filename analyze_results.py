@@ -1,6 +1,7 @@
 from map_overlay import MapOverlay
 import numpy as np
 from sklearn.metrics import confusion_matrix
+import sklearn.metrics as metrics
 import cv2
 import matplotlib.pyplot as plt
 from convenience_tools import *
@@ -27,6 +28,7 @@ def prec_recall_map(myMap, mask_true, mask_predict):
 	accuracy = float(TP + TN)/(TP+FN+TN+FP)
 	f1 = float(2*precision*recall)/(precision+recall)
 
+
 	return precision, recall, accuracy, f1
 
 def draw_segment_analysis(my_map, labels):
@@ -42,7 +44,22 @@ def draw_segment_analysis(my_map, labels):
 
 	return img
 
-def prec_recall(label, prediction, lower_limit = 0):
+FPR = FP/(FP+TN)
+FNR = 1-recall
+
+
+def confusion_analytics(y_true, y_pred):
+	conf = confusion_matrix(y_true, y_pred)
+	TP = conf[1,1]
+	FP = conf[0,1]
+	TN = conf[0,0]
+	FN = conf[1,0]
+	recall = metrics.recall_score(y_true, y_pred)
+	FPR = FP/(FP+TN)
+	FNR = 1-recall
+	return round(FPR,5), round(FNR, 5), conf
+
+def prec_recall(y_true, y_pred):
 	'''
 	INPUT:
 		- confusion_matrix: (2x2 ndarray) Confusion matrix of shape: (actual values) x (predicted values)
@@ -50,21 +67,17 @@ def prec_recall(label, prediction, lower_limit = 0):
 		- (tuple) A Tuple containing the precision and recall of the confusion matrix
 
 	'''
-	prediction = prediction > lower_limit
-
-	conf = confusion_matrix(label, prediction)
-	#print conf.shape
+	conf = confusion_matrix(y_true, y_pred)
 	TP = conf[1,1]
 	FP = conf[0,1]
 	TN = conf[0,0]
 	FN = conf[1,0]
-	#print TP,FP,TN,FN
-
-	precision = 0 if TP+FP == 0 else float(TP)/(TP+FP)
-	recall = 0 if TP+FN == 0 else float(TP)/(TP+FN)
-	accuracy = 0 if (TP+FN+TN+FP) == 0 else float(TP + TN)/(TP+FN+TN+FP)
-	f1 = 0 if precision+recall == 0 else float(2*precision*recall)/(precision+recall)
-
+	precision = metrics.precision_score(y_true, y_pred)
+	recall = metrics.recall_score(y_true, y_pred)
+	accuracy = metrics.accuracy_score(y_true, y_pred)
+	f1 = metrics.f1_score(y_true, y_pred)
+	FPR = FP/(FP+TN)
+	FNR = 1-recall
 	return round(precision, 5), round(recall, 5), round(accuracy, 5), round(f1, 5)
 
 
