@@ -6,15 +6,22 @@ from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
 from convenience_tools import *
 
-def basic_setup(segs = []):
+def basic_setup(segs = [], base_seg = 50, jared = False):
+
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
-	map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
 	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
-	map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
 
 	for seg in segs:
 		map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
 		map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(seg), seg)
+
+	if not jared:
+		map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
+		map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
+
+	if jared:
+		map_train.new_seg_mask(np.loadtxt('jaredlabels/2.csv', delimiter = ','), base_seg, 'damage')
+		map_test.new_seg_mask(np.loadtxt('jaredlabels/3.csv', delimiter = ','), base_seg, 'damage')
 
 	return map_train, map_test
 
@@ -186,14 +193,39 @@ class MapOverlay:
 		return overlay
 
 	def mask_segments(self, i, level, with_img = True):
+		'''
+			masks_segments based on i, a boolean list indicating labelled segments
+		'''
 		mask = np.in1d(self.segmentations[level][1],np.where(i))
 		if with_img:
 			h,w = self.rows, self.cols
 			adj_mask = np.logical_not(mask).reshape(h,w,1)
 			overlay = self.img*adj_mask
-			return overlay
+			return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
 		else:
 			return mask
+
+	def mask_segments_by_indx(self, indcs, level, with_img = True):
+		'''
+			masks_segments based on indcs, a list of indices
+		'''
+		mask = np.in1d(self.segmentations[level][1],indcs)
+		if with_img:
+			h,w = self.rows, self.cols
+			adj_mask = np.logical_not(mask).reshape(h,w,1)
+			overlay = self.img*adj_mask
+			return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+		else:
+			return mask
+
+
+	def new_seg_mask(self, indcs, level, mask_name):
+		'''
+			generates new mask labelling given only segment index numbers at level @level
+		'''
+		mask = self.mask_segments_by_indx(indcs, level, False)
+		self.masks[mask_name] = mask.ravel()
+
 
 	def newPxMask(self, mask, mask_name):
 		h,w,c = self.img.shape

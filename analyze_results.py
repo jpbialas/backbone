@@ -1,7 +1,9 @@
 from map_overlay import MapOverlay
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_curve
 import sklearn.metrics as metrics
+import sklearn
 import cv2
 import matplotlib.pyplot as plt
 from convenience_tools import *
@@ -125,15 +127,40 @@ def side_by_side(myMap, mask_true, mask_predict):
 	plt.title('Labelled Image'), plt.xticks([]), plt.yticks([])
 	plt.subplot(122),plt.imshow(myMap.maskImg(mask_predict))
 	plt.title('Predicted Image'), plt.xticks([]), plt.yticks([])
-	fig.savefig('temp/comparison.png', format='png', dpi=1200)
+	return fig
 
 def probability_heat_map(map_test, full_predict):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	ground_truth = map_test.getLabels('damage')
 	plt.contour(ground_truth.reshape(map_test.rows, map_test.cols), colors = 'green')
-	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic')
+	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic', norm = plt.Normalize(0,1))
 	plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
+	return fig
+
+def FPR_FNR_graph(map_test, full_predict, name):
+	'''FPRs, FNRs = [], []
+	pbar = custom_progress()
+	fig = plt.figure('FPR v FNR {}'.format(map_test.name[-1]))
+	for i in pbar(range(10)):
+		next_predict = full_predict.ravel()>=(i/10.0)
+		next_FPR, next_FNR, _ = confusion_analytics(map_test.getLabels('damage'), next_predict)
+		FPRs.append(next_FPR)
+		FNRs.append(next_FNR)'''
+
+	FPRs, TPRs, threshs = roc_curve(map_test.getLabels('damage'), full_predict.ravel())
+	fig = plt.figure('ROC {}'.format(map_test.name[-1]))
+	plt.plot(FPRs, TPRs)
+	plt.title('ROC Curve (AUC = {})'.format(round(sklearn.metrics.roc_auc_score(map_test.getLabels('damage'), full_predict.ravel()), 5)))
+	plt.xlabel('False Positive Rate')
+	plt.ylabel('True Positive Rate')
+	plt.axis([0, 1, 0, 1])
+	indx = np.argmin(FPRs**2 + (1-TPRs)**2)
+	print threshs[indx]
+	print FPRs[indx]
+	print TPRs[indx]
+	fig.savefig('../../Compare Methods/{} ROC {}.png'.format(name, map_test.name[-1]))
+	
 
 
 def feature_importance(model, labels, X):

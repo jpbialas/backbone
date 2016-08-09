@@ -76,15 +76,14 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 
 
 
-def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
-	model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, verbose)
-	return test(map_test, model, labels, mask_test, edge_k, hog_k, nbins, n_trees, verbose)
+def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
+	model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, EVEN, verbose)
+	return test(map_test, model, labels, mask_test, frac_test, edge_k, hog_k, nbins, n_trees, EVEN, verbose)
 
-def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
+def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
 	v_print('Starting test gen', verbose)
 	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
 	v_print('Done test gen', verbose)
-	print mask_test
 	y_test = map_test.getLabels(mask_test)
 	n_test = y_test.shape[0]
 	if frac_test<1:
@@ -93,30 +92,41 @@ def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k
 		test = np.arange(n_test)
 
 	ground_truth = y_test[test]
-
-	prediction = model.predict_proba(X_test[test])[:,1]
-	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction)
+	v_print('Starting Predction', verbose)
+	prediction_prob = model.predict_proba(X_test[test])[:,1]
+	v_print("Done with Prediction", verbose)
+	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction_prob)
 	if frac_test == 1:
-		analyze_results.probabilty_heat_map(map_test, prediction)
-		prediction = prediction>.5
-		map_test.newPxMask(prediction.ravel(), 'damage_pred')
-		
-		print analyze_results.prec_recall_map(map_test, 'damage', 'damage_pred')
-		analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
+		heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob)
+
+		heat_fig.savefig('../../Compare Methods/px_heatmap_{}.png'.format(map_test.name), format='png')
+
+		roc_name = 'Px Even' if EVEN else 'Px'
+		analyze_results.FPR_FNR_graph(map_test, prediction_prob, roc_name)
+
+
+		map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
+		sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
+		sbs_fig.savefig('../../Compare Methods/px_sbs_{}.png'.format(map_test.name), format='png')
 	else:
 		v_print("Done Testing", verbose)
+		prediction = prediction_prob>.4
 		print analyze_results.prec_recall(ground_truth, prediction)
 
 	return model, X_test, y_test, labels	
 
-def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, verbose = True):
+def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
 	v_print('Starting train gen', verbose)
 	X_train, labels = gen_features(map_train, edge_k, hog_k, nbins)
 	v_print('Done train gen', verbose)
 
 	y_train =  map_train.getLabels(mask_train)
 	n_train = y_train.shape[0]
-	train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
+
+	if EVEN:
+		train = sample(y_train, int(n_train*frac_train))
+	else:
+		train = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*frac_train))
 
 	v_print("Starting Modelling", verbose)
 	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1, verbose = verbose)
@@ -151,18 +161,20 @@ def fit_to_segs(map_test, segs = 50, probabilities = None):
 	
 
 def main_test():
-	map_train, map_test = map_overlay.basic_setup([50])
+	map_train, map_test = map_overlay.basic_setup([50], 50, jared = True)
 	#fit_to_segs(map_test)
 	#fit_to_segs(map_train)
 	#plt.show()
 
-	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, verbose = True)
-	analyze_results.feature_importance(model, names, X)
-	plt.show()
 
-	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, verbose = True)
+	
+	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = True, verbose = True)
 	analyze_results.feature_importance(model, names, X)
 
+	#plt.show()
+
+	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = True, verbose = True)
+	analyze_results.feature_importance(model, names, X)
 	plt.show()
 
 if __name__ == "__main__":

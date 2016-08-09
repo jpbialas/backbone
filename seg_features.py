@@ -6,9 +6,9 @@ import os
 
 
 
-def color_edge(my_map, segs):
-	names = np.array(['ave_red_{}'.format(segs),'ave_green_{}'.format(segs), 'ave_blue_{}'.format(segs), 'edge_density_{}'.format(segs)])
-	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[segs][0]))
+def color_edge(my_map, seg):
+	names = np.array(['ave_red_{}'.format(seg),'ave_green_{}'.format(seg), 'ave_blue_{}'.format(seg), 'edge_density_{}'.format(seg)])
+	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
 	if os.path.exists(p):
 		data = np.load(p)
 	else:
@@ -16,7 +16,7 @@ def color_edge(my_map, segs):
 		edges = cv2.Canny(my_map.img,50,100).reshape((my_map.rows,my_map.cols, 1))
 		labels = my_map.getLabels('damage').reshape(my_map.rows, my_map.cols, 1)*255
 		color_e = np.concatenate((my_map.img, edges, labels), axis = 2).reshape((my_map.rows*my_map.cols, 5))
-		segs = my_map.segmentations[segs][1].ravel()
+		segs = my_map.segmentations[seg][1].ravel()
 		n_segs = int(np.max(segs))+1
 		data = np.zeros((n_segs, 5), dtype = 'uint8')
 		for i in pbar(range(n_segs)):
@@ -36,6 +36,30 @@ def show_shapes(my_map, rect, ellipse, n_segs, level):
 	cv2.drawContours(img,[box],0,(0,0,255),2)
 	cv2.imshow("img",img)
 	cv2.waitKey(1000)
+
+def hog(my_map, seg):
+	bins = 16
+	names = []
+	for i in range(bins):
+		names.append('hog {}'.format(i))
+	p = os.path.join('features', "hog_seg_{}.npy".format(my_map.segmentations[seg][0]))
+	if os.path.exists(p):
+		data = np.load(p)
+	else:
+		pbar = custom_progress()
+		bw_img = cv2.cvtColor(my_map.img, cv2.COLOR_RGB2GRAY)
+		gx = cv2.Sobel(bw_img, cv2.CV_32F, 1, 0)
+		gy = cv2.Sobel(bw_img, cv2.CV_32F, 0, 1)
+		mag, ang = cv2.cartToPolar(gx, gy)
+		angles = ang/2.0*np.pi*255
+		segs = my_map.segmentations[seg][1].ravel()
+		n_segs = int(np.max(segs))+1
+		data = np.zeros((n_segs, 16), dtype = 'uint8')
+		for i in pbar(range(n_segs)):
+			indices = np.where(segs == i)[0]
+			data[i] = np.histogram(angles.ravel()[indices], 16)[0]
+		np.save(p, data)
+	return data, names
 
 
 def shapes(my_map, level):
@@ -98,8 +122,9 @@ def multi_segs(my_map, base_seg, seg_levels):
 	pbar = custom_progress()
 	color_data, color_names = color_edge(my_map, base_seg)
 	shape_data, shape_names = shapes(my_map, base_seg)
-	data = np.concatenate((shape_data, color_data), axis = 1)
-	names = np.concatenate((shape_names, color_names), axis = 0)
+	hog_data, hog_names = hog(my_map, base_seg)
+	data = np.concatenate((shape_data, hog_data, color_data), axis = 1)
+	names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
 	if len(seg_levels)>0:
 		for seg in seg_levels:
 			segmentation = my_map.segmentations[seg][1].ravel().astype('int')
@@ -109,9 +134,10 @@ def multi_segs(my_map, base_seg, seg_levels):
 			color_data, color_names = color_edge(my_map, seg)
 			color_data = color_data[:,:-1]
 			shape_data, shape_names = shapes(my_map, seg)
+			hog_data, hog_names = hog(my_map, seg)
 
-			next_data = np.concatenate((shape_data, color_data), axis = 1)[convert]
-			next_names = np.concatenate((shape_names, color_names), axis = 0)
+			next_data = np.concatenate((shape_data, hog_data, color_data), axis = 1)[convert]
+			next_names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
 			#next_data = color_data[convert]
 			#next_names = color_names
 			data = np.concatenate((next_data, data), axis = 1)
