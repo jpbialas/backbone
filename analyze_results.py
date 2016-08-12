@@ -138,7 +138,7 @@ def probability_heat_map(map_test, full_predict):
 	plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
 	return fig
 
-def FPR_FNR_graph(map_test, full_predict, name):
+def ROC(map_test, ground_truth, full_predict, name):
 	'''FPRs, FNRs = [], []
 	pbar = custom_progress()
 	fig = plt.figure('FPR v FNR {}'.format(map_test.name[-1]))
@@ -148,10 +148,10 @@ def FPR_FNR_graph(map_test, full_predict, name):
 		FPRs.append(next_FPR)
 		FNRs.append(next_FNR)'''
 
-	FPRs, TPRs, threshs = roc_curve(map_test.getLabels('damage'), full_predict.ravel())
-	fig = plt.figure('ROC {}'.format(map_test.name[-1]))
+	FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
+	fig = plt.figure('{} ROC {}'.format(name,map_test.name[-1]))
 	plt.plot(FPRs, TPRs)
-	plt.title('ROC Curve (AUC = {})'.format(round(sklearn.metrics.roc_auc_score(map_test.getLabels('damage'), full_predict.ravel()), 5)))
+	plt.title('ROC Curve (AUC = {})'.format(round(sklearn.metrics.roc_auc_score(ground_truth, full_predict.ravel()), 5)))
 	plt.xlabel('False Positive Rate')
 	plt.ylabel('True Positive Rate')
 	plt.axis([0, 1, 0, 1])
@@ -159,8 +159,10 @@ def FPR_FNR_graph(map_test, full_predict, name):
 	print threshs[indx]
 	print FPRs[indx]
 	print TPRs[indx]
-	fig.savefig('../../Compare Methods/{} ROC {}.png'.format(name, map_test.name[-1]))
-	
+
+	##p = '../../Compare Methods/{} ROC even bad train New_Feats {}'.format(name, map_test.name[-1])
+	##fig.savefig(p+".png")
+	##np.save(p+'.npy', (FPRs, TPRs, threshs))
 
 
 def feature_importance(model, labels, X):

@@ -56,7 +56,7 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 
 	if EVEN:
 		model.fit(X_train[samples], y_train[samples])
-		thresh = .5
+		thresh = .7
 	else:
 		thresh = .4
 		model.fit(X_train, y_train)
@@ -67,30 +67,31 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 		prediction_prob = model.predict_proba(X_test)[:,1]
 		full_predict = prediction_prob[map_test.segmentations[base_seg][1].astype('int')]
 		##heat_fig = analyze_results.probability_heat_map(map_test, full_predict)
-		##heat_fig.savefig('../../Compare Methods/seg_heatmap_{}.png'.format(map_test.name), format='png', dpi = 2400)
+		##heat_fig.savefig('../../Compare Methods/seg_heatmap_even_feat_{}.png'.format(map_test.name), format='png', dpi = 2400)
 
 
 		roc_name = 'Seg Even' if EVEN else 'Seg' 
-		analyze_results.FPR_FNR_graph(map_test, full_predict, roc_name)
+		analyze_results.ROC(map_test, map_test.getLabels('damage'), full_predict, roc_name)
 
 
-		##prediction = prediction_prob>thresh
-		##full_predict = (full_predict>thresh).ravel()
+		prediction = prediction_prob>thresh
+		full_predict = (full_predict>thresh).ravel()
 
-		##map_test.newPxMask(full_predict.ravel(), 'damage_pred')
+		map_test.newPxMask(full_predict.ravel(), 'damage_pred')
 		##sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
 
-		##sbs_fig.savefig('../../Compare Methods/seg_sbs_{}.png'.format(map_test.name), format='png', dpi = 2400)
+		#sbs_fig.savefig('../../Compare Methods/seg_sbs_even_{}.png'.format(map_test.name), format='png', dpi = 2400)
 	else:
 		prediction = model.predict(X_test)
 		full_predict = map_test.mask_segments(prediction, base_seg, False)
 		map_test.newPxMask(full_predict.ravel(), 'damage_pred')
 		analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
 
-	##analyze_results.feature_importance(model, names, X_train)
+	analyze_results.feature_importance(model, names, X_train)
 	##print full_predict.shape, ground_truth.shape
 	##print "pred",analyze_results.prec_recall(map_test.getLabels('damage'), full_predict)
 	##print analyze_results.confusion_analytics(map_test.getLabels('damage'), full_predict)
+	return full_predict
 	
 
 def test2(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5):
@@ -98,10 +99,12 @@ def test2(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5):
 	map_test, X_test, y_test, _ = setup_segs(3, base_seg, segs,  thresh, jared = True)
 	
 	print("2,3")
-	full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees)
+	pred1 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees)
+
+
+
 	print("3,2")
-	full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
-	
+	pred2 = full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
 
 if __name__ == '__main__':
 	#cache_all()

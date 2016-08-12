@@ -99,15 +99,15 @@ def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k
 	if frac_test == 1:
 		heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob)
 
-		heat_fig.savefig('../../Compare Methods/px_heatmap_{}.png'.format(map_test.name), format='png')
+		heat_fig.savefig('../../Compare Methods/px_heatmap_{}.png'.format(map_test.name), format='png', dpi = 2400)
 
 		roc_name = 'Px Even' if EVEN else 'Px'
-		analyze_results.FPR_FNR_graph(map_test, prediction_prob, roc_name)
+		analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, roc_name)
 
 
 		map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
 		sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
-		sbs_fig.savefig('../../Compare Methods/px_sbs_{}.png'.format(map_test.name), format='png')
+		sbs_fig.savefig('../../Compare Methods/px_sbs_{}.png'.format(map_test.name), format='png', dpi = 2400)
 	else:
 		v_print("Done Testing", verbose)
 		prediction = prediction_prob>.4
@@ -161,20 +161,20 @@ def fit_to_segs(map_test, segs = 50, probabilities = None):
 	
 
 def main_test():
-	map_train, map_test = map_overlay.basic_setup([50], 50, jared = True)
+	map_train, map_test = map_overlay.basic_setup([50], 50, jared = False)
 	#fit_to_segs(map_test)
 	#fit_to_segs(map_train)
 	#plt.show()
 
+	model, X, y1, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = False, verbose = True)
+	analyze_results.feature_importance(model, names, X)
 
-	
-	model, X, y, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = True, verbose = True)
+
+	model, X, y2, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = False, verbose = True)
 	analyze_results.feature_importance(model, names, X)
 
 	#plt.show()
 
-	model, X, y, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = True, verbose = True)
-	analyze_results.feature_importance(model, names, X)
 	plt.show()
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import json
 from convenience_tools import *
 import os
 
 
 
 def color_edge(my_map, seg):
-	names = np.array(['ave_red_{}'.format(seg),'ave_green_{}'.format(seg), 'ave_blue_{}'.format(seg), 'edge_density_{}'.format(seg)])
+	names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
 	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
 	if os.path.exists(p):
 		data = np.load(p)
@@ -26,6 +27,23 @@ def color_edge(my_map, seg):
 	return data, names
 
 
+def features_from_james(img_num, seg):
+	json_file = open('segmentations/withfeatures{}/{}-{}-features.json'.format(img_num, img_num, seg))
+	json_str = json_file.read()
+	#print json_str
+
+	json_data = json.loads(json_str.replace('inf', '0'))
+	n_segs = len(json_data['features'])
+	n_feats = len(json_data['features'][0]['properties'].values())
+
+	data = np.zeros((n_segs, n_feats))
+	pbar = custom_progress()
+	json_features = json_data['features']
+	names = json_features[0]['properties'].keys()
+	for i in pbar(range(n_segs)):
+		data[i] = json_features[i]['properties'].values()
+	return data, names
+
 def show_shapes(my_map, rect, ellipse, n_segs, level):
 	test = np.zeros(n_segs)
 	test[i] = 1
@@ -41,7 +59,7 @@ def hog(my_map, seg):
 	bins = 16
 	names = []
 	for i in range(bins):
-		names.append('hog {}'.format(i))
+		names.append('hog{}'.format(i))
 	p = os.path.join('features', "hog_seg_{}.npy".format(my_map.segmentations[seg][0]))
 	if os.path.exists(p):
 		data = np.load(p)
@@ -63,7 +81,7 @@ def hog(my_map, seg):
 
 
 def shapes(my_map, level):
-	names = np.array(['rect_elong_{}'.format(level),'rect_fit_{}'.format(level),'ellipse_elong_{}'.format(level),'ellipse_fit_{}'.format(level)])
+	names = np.array(['re{}'.format(level),'rf{}'.format(level),'ee{}'.format(level),'ef{}'.format(level)])
 	p = os.path.join('features', "aspect_extent_{}.npy".format(my_map.segmentations[level][0]))
 	if os.path.exists(p):
 		data = np.load(p)
@@ -116,6 +134,7 @@ def shapes(my_map, level):
 
 def multi_segs(my_map, base_seg, seg_levels):
 	img = my_map.img
+	img_num = my_map.name[-1]
 	h,w,_ = img.shape
 	segs = my_map.segmentations[base_seg][1].ravel().astype('int')
 	n_segs = int(np.max(segs))
@@ -123,8 +142,10 @@ def multi_segs(my_map, base_seg, seg_levels):
 	color_data, color_names = color_edge(my_map, base_seg)
 	shape_data, shape_names = shapes(my_map, base_seg)
 	hog_data, hog_names = hog(my_map, base_seg)
-	data = np.concatenate((shape_data, hog_data, color_data), axis = 1)
-	names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
+	james_data, james_names = features_from_james(img_num, base_seg)
+	data = np.concatenate((james_data,shape_data, hog_data, color_data), axis = 1)
+
+	names = np.concatenate((james_names, shape_names, hog_names, color_names), axis = 0)
 	if len(seg_levels)>0:
 		for seg in seg_levels:
 			segmentation = my_map.segmentations[seg][1].ravel().astype('int')
@@ -136,8 +157,11 @@ def multi_segs(my_map, base_seg, seg_levels):
 			shape_data, shape_names = shapes(my_map, seg)
 			hog_data, hog_names = hog(my_map, seg)
 
-			next_data = np.concatenate((shape_data, hog_data, color_data), axis = 1)[convert]
-			next_names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
+			#james_data, james_names = features_from_james(img_num, seg)
+			#james_names = [s + str(seg) for s in james_names]
+
+			next_data = np.concatenate((shape_data, color_data), axis = 1)[convert]
+			next_names = np.concatenate((shape_names, color_names), axis = 0)
 			#next_data = color_data[convert]
 			#next_names = color_names
 			data = np.concatenate((next_data, data), axis = 1)
