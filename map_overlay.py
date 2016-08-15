@@ -57,7 +57,7 @@ class MapOverlay:
 		driver.Register()
 		ds = gdal.Open(map_fn, 0)
 		if ds is None:
-			print 'Could not open ' + map_fn
+			print('Could not open ' + map_fn)
 			sys.exit(1)
 
 		self.map_ds = ds
