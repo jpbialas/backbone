@@ -29,8 +29,10 @@ def sample(labels, nsamples):
 	ones = np.where(labels == 1)[0]
 	n_ones = np.shape(ones)[0]
 
-	zero_samples = zeros[np.random.random_integers(0,n_zeros-1, nsamples/2)]
-	one_samples = ones[np.random.random_integers(0, n_ones-1, nsamples/2)]
+
+	zero_samples = np.random.choice(zeros, nsamples/2)
+	one_samples = np.random.choice(ones, nsamples/2)
+
 	final_set = np.concatenate((zero_samples, one_samples))
 
 	return final_set
@@ -111,7 +113,7 @@ def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k
 	else:
 		v_print("Done Testing", verbose)
 		prediction = prediction_prob>.4
-		print analyze_results.prec_recall(ground_truth, prediction)
+		v_print (analyze_results.prec_recall(ground_truth, prediction), verbose)
 
 	return model, X_test, y_test, labels	
 
@@ -136,28 +138,6 @@ def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog
 	return model, labels, X_train
 
 
-def fit_to_segs(map_test, segs = 50, probabilities = None):
-	segs = map_test.segmentations[segs][1].ravel()
-	ground_truth = map_test.getLabels('damage')
-	if probabilities is None:
-		probabilities = np.load(os.path.join('temp', "prediction_{}.npy".format(map_test.name)))
-	pbar = custom_progress()
-	n_segs = int(np.max(segs))+1
-	data = np.zeros((n_segs), dtype = 'float')
-	for i in pbar(range(n_segs)):
-		indices = np.where(segs == i)[0]
-		data.itemset(i, np.sum(probabilities[indices], axis = 0)/indices.shape[0])
-	probs = data[segs.reshape(map_test.rows, map_test.cols).astype('int')]
-	analyze_results.probabilty_heat_map(map_test, probs)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.1)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.15)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.2)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.25)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.3)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.35)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.4)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.45)
-	print analyze_results.prec_recall(ground_truth, probs.ravel()>.5)
 	
 
 def main_test():
@@ -166,11 +146,11 @@ def main_test():
 	#fit_to_segs(map_train)
 	#plt.show()
 
-	model, X, y1, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = False, verbose = True)
+	model, X, y1, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = False, verbose = False)
 	analyze_results.feature_importance(model, names, X)
 
 
-	model, X, y2, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = False, verbose = True)
+	model, X, y2, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = False, verbose = False)
 	analyze_results.feature_importance(model, names, X)
 
 	#plt.show()

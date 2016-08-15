@@ -39,18 +39,18 @@ def sample(y, n_samples = -1):
 	ones = np.where(y==1)[0]
 	n0,n1 = zeros.shape[0], ones.shape[0]
 	if n_samples == -1:
-		zero_samples = zeros[np.random.random_integers(0,n0-1, min(n0,n1))]
-		one_samples = ones[np.random.random_integers(0, n1-1, min(n0,n1))]
+		zero_samples = np.random.choice(zeros, min(n0, n1))#zeros[np.random.random_integers(0,n0-1, min(n0,n1))]
+		one_samples = np.random.choice(ones, min(n0, n1))#ones[np.random.random_integers(0, n1-1, min(n0,n1))]
 	else:
-		zero_samples = zeros[np.random.random_integers(0,n0-1, n_samples//2)]
-		one_samples = ones[np.random.random_integers(0, n1-1, n_samples//2)]
+		zero_samples = np.random.choice(zeros, n_samples//2)#zeros[np.random.random_integers(0,n0-1, n_samples//2)]
+		one_samples = np.random.choice(ones, n_samples//2)#ones[np.random.random_integers(0, n1-1, n_samples//2)]
 
 	return np.concatenate((zero_samples, one_samples))
 
 
 def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, verbose = True):
 	CUSTOM = True
-	EVEN = True
+	EVEN = False
 	model= RandomForestClassifier(n_estimators=n_trees, n_jobs = -1, verbose = verbose)#, class_weight = "balanced")
 	samples = sample(y_train)
 
@@ -74,10 +74,10 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 		analyze_results.ROC(map_test, map_test.getLabels('damage'), full_predict, roc_name)
 
 
-		prediction = prediction_prob>thresh
-		full_predict = (full_predict>thresh).ravel()
+		##prediction = prediction_prob>thresh
+		##full_predict = (full_predict>thresh).ravel()
 
-		map_test.newPxMask(full_predict.ravel(), 'damage_pred')
+		##map_test.newPxMask(full_predict.ravel(), 'damage_pred')
 		##sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
 
 		#sbs_fig.savefig('../../Compare Methods/seg_sbs_even_{}.png'.format(map_test.name), format='png', dpi = 2400)
@@ -95,16 +95,43 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 	
 
 def test2(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5):
-	map_train, X_train, y_train, names = setup_segs(2, base_seg, segs, thresh, jared = True)
-	map_test, X_test, y_test, _ = setup_segs(3, base_seg, segs,  thresh, jared = True)
+	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared = True)
+	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared = True)
 	
-	print("2,3")
+	print("3,2")
 	pred1 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees)
 
+	print('3,2 joes')
+	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared = False)
+	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared = False)
 
 
-	print("3,2")
-	pred2 = full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
+	pred2 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees)
+
+	'''plt.figure('Trained on Jareds')
+	plt.imshow(pred1, cmap = 'seismic', norm = plt.Normalize(0,1))
+	plt.figure('Trained on Joes')
+	plt.imshow(pred2, cmap = 'seismic', norm = plt.Normalize(0,1))
+	plt.figure('Difference')
+	plt.imshow(np.abs(pred1-pred2), cmap = 'gray', norm = plt.Normalize(0,1))
+	plt.figure('Difference Normalized')
+	plt.imshow(np.abs(pred1-pred2), cmap = 'gray')
+
+	plt.figure('Jared Picks')
+	plt.imshow(np.clip(pred1-pred2, 0, 1), cmap = 'gray')
+
+	plt.figure('Joes Picks')
+	plt.imshow(np.clip(pred2-pred1, 0, 1), cmap = 'gray')'''
+
+	plt.figure('Difference Normalized')
+	plt.imshow(pred1-pred2, cmap = 'seismic', norm = plt.Normalize(-max(np.max(pred1-pred2), np.max(pred2-pred1)), max(np.max(pred1-pred2), np.max(pred2-pred1))))
+	
+	plt.figure('Difference')
+	plt.imshow(pred1-pred2, cmap = 'seismic', norm = plt.Normalize(-1,1))
+
+
+	#print("3,2")
+	#pred2 = full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees)
 
 if __name__ == '__main__':
 	#cache_all()

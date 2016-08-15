@@ -6,10 +6,24 @@ from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
 from convenience_tools import *
 
+
+''''
+from map_overlay import MapOverlay
+map_test = MapOverlay('datafromjoe/1-0003-0002.tif')
+map_test.new_segmentation('segmentations/withfeatures2/2-1000-features.json', 1000)
+
+
+'''
 def basic_setup(segs = [], base_seg = 50, jared = False):
 
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
 	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
+
+
+	
+	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
+	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(seg), seg)
+
 
 	for seg in segs:
 		map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
@@ -22,6 +36,7 @@ def basic_setup(segs = [], base_seg = 50, jared = False):
 	if jared:
 		map_train.new_seg_mask(np.loadtxt('jaredlabels/2.csv', delimiter = ','), base_seg, 'damage')
 		map_test.new_seg_mask(np.loadtxt('jaredlabels/3.csv', delimiter = ','), base_seg, 'damage')
+
 
 	return map_train, map_test
 
@@ -129,7 +144,7 @@ class MapOverlay:
 		driver = ogr.GetDriverByName('ESRI Shapefile')
 		in_ds = driver.Open(shape_fn, 0) #Second parameter makes it read only. Other option is 1
 		if in_ds is None:
-		  print 'Could not open file'
+		  print('Could not open file')
 		  sys.exit(1)
 		in_lyr = in_ds.GetLayer()
 

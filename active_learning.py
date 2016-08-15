@@ -11,6 +11,29 @@ import seg_classify as sc
 from sklearn.ensemble import RandomForestClassifier
 
 
+def balance(labels, method = 0):
+	'''
+	Balances the given data by either undersampling the majority class or oversampling the minority class.
+	The resampling method is specified in method
+		- 0 = Undersample majority class
+		- 1 = Oversample minority class
+
+	'''
+	split_labels = [np.where(labels==0)[0], np.where(labels==1)[0]]
+	split_counts = [len(split_labels[0]), len(split_labels[1])]
+	maj_class = np.argmax(split_counts)
+	min_class = int(not maj_class)
+	if method == 0:
+		new_maj = np.random.choice(split_labels[maj_class], split_counts[min_class], replace = False)
+		new_min = split_labels[min_class]
+	else:
+		new_maj = split_labels[maj_class]
+		cls_diff = split_counts[maj_class] - split_counts[min_class]
+		new_min_addition = np.random.choice(split_labels[min_class], cls_diff, replace = False)
+		new_min = np.concatenate((split_labels[min_class], new_min_addition))
+	return np.concatenate((new_min, new_maj))
+
+
 def bootstrap(L, k):
 	''' Returns k random samples of L of size |L| with replacement
 	INPUT:
@@ -25,6 +48,8 @@ def strawman_error(X, y, m):
 
 
 def uncertainty(data, y, k, m, frac_test = 1.0, verbose = True):
+	##NOTE: HAVE NOT YET IMPLEMENTED BALANCED HERE
+
 	'''Computes uncertainty for all unlabelled points as described in Mozafari 3.2 
 	and returnst the m indices of the most uncertain
 	NOTE: Smaller values are more certain b/c they have smaller variance
@@ -119,7 +144,7 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 
 	# Initial sample of labelled data
 	#sample = np.random.choice(np.arange(y_train.shape[0]), start_n, replace = False)
-	#sample = sc.sample(y_train, start_n)
+	sample = sc.sample(y_train, start_n)
 
 	random_sample = sample.copy()
 
@@ -138,7 +163,7 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 
 	###########################      MATPLOTLIB STUFF      ################################
 	#Turns on interactive mode
-	plt.ion()
+	##plt.ion()
 
 	#Sets up FPR chart
 	prec_comparisons = plt.figure('False Positive Rate')
@@ -183,8 +208,8 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 	plt.ylabel('Accuracy')
 
 	# Draws plots
-	plt.draw()
-	plt.pause(0.05)
+	##plt.draw()
+	##plt.pause(0.05)
 
 	################################### END MATPLOTLIB STUFF #############################
 
@@ -235,19 +260,19 @@ def run_active_learning_seg(start_n=100, step_n=100, boot_n = 100,  n_updates = 
 		graph_Acc_r.set_ydata(acc_r)
 		graph_Acc_r.set_xdata(X_axis)
 
-		plt.draw()
-		plt.pause(0.05)
+		##plt.draw()
+		##plt.pause(0.05)
 		############################ END CHART UPDATEDS  ###########################
 
 		#Save results for each iteration
 		prec_comparisons.savefig('temp/FPR_jared {} {}.png'.format(legend_name, train))
 		rec_comparisons.savefig('temp/FNR_jared {} {}.png'.format(legend_name, train))
-		f1_comparisons.savefig('temp/F1_jared {} {}.png'.format(legend_name, train))
-		acc_comparisons.savefig('temp/Acc_jared {} {}.png'.format(legend_name, train))
+		##f1_comparisons.savefig('temp/F1_jared {} {}.png'.format(legend_name, train))
+		##acc_comparisons.savefig('temp/Acc_jared {} {}.png'.format(legend_name, train))
 		np.save('temp/conf_jared {} {}.npy'.format(legend_name, train), np.array(conf))
 		np.save('temp/conr_jared random {}.npy'.format(train),np.array(conf_r))
 
-	plt.waitforbuttonpress()
+	##plt.waitforbuttonpress()
 
 if __name__ == '__main__':
 	#map_train, map_test = map_overlay.basic_setup()

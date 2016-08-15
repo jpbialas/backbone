@@ -82,7 +82,7 @@ def GLCM(img, k, img_name = ""):
 		pbar = custom_progress()
 		gcm = greycomatrix
 		gcp = greycoprops
-		print h,w
+		print (h,w)
 		total = (h-k/2)*(w-k/2)
 		
 		lset = new_img.itemset
