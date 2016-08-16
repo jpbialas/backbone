@@ -98,18 +98,18 @@ def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k
 	prediction_prob = model.predict_proba(X_test[test])[:,1]
 	v_print("Done with Prediction", verbose)
 	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction_prob)
+
+
+	img_num = map_test.name[-1]
+	label_name = "Jared" if jared else "Joe"
+	model_name = analyze_results.gen_model_name("Px", label_name, EVEN, img_num, new_feats)
+
 	if frac_test == 1:
-		heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob)
-
-		heat_fig.savefig('../../Compare Methods/px_heatmap_{}.png'.format(map_test.name), format='png', dpi = 2400)
-
-		roc_name = 'Px Even' if EVEN else 'Px'
-		analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, roc_name)
-
+		heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, model_name, True)
+		analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, roc_name, model_name, True)
 
 		map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
-		sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred')
-		sbs_fig.savefig('../../Compare Methods/px_sbs_{}.png'.format(map_test.name), format='png', dpi = 2400)
+		sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', model_name, True)
 	else:
 		v_print("Done Testing", verbose)
 		prediction = prediction_prob>.4

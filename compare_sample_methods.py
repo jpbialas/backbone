@@ -8,6 +8,7 @@ from map_overlay import MapOverlay
 from mpl_toolkits.mplot3d import Axes3D
 from tsne import tsne
 from sklearn.decomposition import PCA
+import seg_classify as sc
 
 def pca(x, k):
     print("Starting PCA")
@@ -62,10 +63,10 @@ def plot(y, colors, k, name):
 		yaxis = y[:,1]
 		fig = plt.figure(name)
 		ax = fig.add_subplot(111)
-		green_patch = mpatches.Patch(color='green', label='Image 002')
-		red_patch = mpatches.Patch(color='red', label='Image 003')
+		green_patch = mpatches.Patch(color='green', label='Joes Data')
+		red_patch = mpatches.Patch(color='red', label='Jareds Data')
 		plt.legend(handles=[green_patch, red_patch])
-		ax.scatter(xaxis,yaxis, s = 1, color = colors, alpha = 0.5)
+		ax.scatter(xaxis,yaxis, s = 3, color = colors)#, alpha = 0.5)
 	if k == 3:
 		xaxis = np.array(y[:,0])
 		yaxis = np.array(y[:,1])
@@ -103,9 +104,41 @@ def all_histos(X1, X2):
 		plt.xlim(leftmost, rightmost)
 		
 
-
-
 def compare(k):
+	map_jared, X_jared, y_jared, names = sc.setup_segs(3, 50, [100], .5, jared = True)
+
+	map_joe, X_joe, y_joe, names = sc.setup_segs(3, 50, [100], .5, jared = False)
+
+	print y_jared.shape, y_joe.shape
+
+	print np.array_equal(y_joe, y_jared), y_jared, y_joe
+
+	jared_damage = X_jared[np.where(y_jared>0)[0]]
+	jared_labels = np.ones(jared_damage.shape[0])
+	joe_damage = X_joe[np.where(y_joe>0)[0]]
+	joe_labels = np.zeros(joe_damage.shape[0])
+
+	all_damage = np.concatenate((joe_damage, jared_damage))
+	all_labels = np.concatenate((joe_labels, jared_labels))
+
+	colors, color_names, _ = assign_colors(all_labels)
+	print color_names
+
+	#print ("starting tsne")
+	#y_tsne = tsne(all_damage.T)
+	#print ('done tsne')
+	print ("starting pca")
+	y_pca = pca(all_damage, k)
+	print('done pca')
+
+	#plot(y_tsne, colors, k, 'TSNE')
+	plot(y_pca, colors, k, 'PCA')
+
+	plt.show()
+
+
+
+def compare_old(k):
 	samples_002, labels_002 = get_samples(2, 100000, 0, load = False)
 	samples_003, labels_003 = get_samples(3, 100000, 1, load = False)
 

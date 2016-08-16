@@ -8,6 +8,13 @@ import cv2
 import matplotlib.pyplot as plt
 from convenience_tools import *
 
+def gen_model_name(model_type = "Segs", labelling = "Jared", even = True, img_num = 3, new_feats = True):
+	full_name = model_type+"_"+labelling+"_"
+	full_name+="EVEN_" if even else ""
+	full_name+=img_num
+	full_name+="_NewFeats" if new_feats else ""
+	return full_name
+
 
 def prec_recall_map(myMap, mask_true, mask_predict):
 	'''
@@ -120,25 +127,29 @@ def test_thresholds():
 
 #test_thresholds()
 
-def side_by_side(myMap, mask_true, mask_predict):
+def side_by_side(myMap, mask_true, mask_predict, name, save = True):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	plt.subplot(121),plt.imshow(myMap.maskImg(mask_true))
 	plt.title('Labelled Image'), plt.xticks([]), plt.yticks([])
 	plt.subplot(122),plt.imshow(myMap.maskImg(mask_predict))
 	plt.title('Predicted Image'), plt.xticks([]), plt.yticks([])
+	if save:
+		fig.savefig('Compare Methods/{}_sbs.png'.format(name), format='png', dpi = 2400)
 	return fig
 
-def probability_heat_map(map_test, full_predict):
+def probability_heat_map(map_test, full_predict, name, save = True):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	ground_truth = map_test.getLabels('damage')
 	plt.contour(ground_truth.reshape(map_test.rows, map_test.cols), colors = 'green')
 	plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic', norm = plt.Normalize(0,1))
 	plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
+	if save:
+		fig.savefig('Compare Methods/{}_heatmap.png'.format(name), format='png', dpi = 2400)
 	return fig
 
-def ROC(map_test, ground_truth, full_predict, name):
+def ROC(map_test, ground_truth, full_predict, name, save = True):
 	'''FPRs, FNRs = [], []
 	pbar = custom_progress()
 	fig = plt.figure('FPR v FNR {}'.format(map_test.name[-1]))
@@ -159,10 +170,10 @@ def ROC(map_test, ground_truth, full_predict, name):
 	print threshs[indx]
 	print FPRs[indx]
 	print TPRs[indx]
-
-	##p = '../../Compare Methods/{} ROC even bad train New_Feats {}'.format(name, map_test.name[-1])
-	##fig.savefig(p+".png")
-	##np.save(p+'.npy', (FPRs, TPRs, threshs))
+	if save:
+		fig.savefig('Compare Methods/{}_ROC.png'.format(name), format='png', dpi = 2400)
+		np.save('Compare Methods/'+name+'.npy', (FPRs, TPRs, threshs))
+	return fig
 
 
 def feature_importance(model, labels, X):
