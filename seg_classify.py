@@ -17,22 +17,27 @@ def visualize(img_num, seg_level):
 		sf.visualize_segments(new_map, data[:,i], seg_level, names[i], 220+i+1)
 
 
-def setup_segs(img_num, base_seg, segs, thresh, jared = False):
+def setup_segs(img_num, base_seg, segs, thresh, jared = False, new_feats = True):
 	new_map = MapOverlay('datafromjoe/1-0003-000{}.tif'.format(img_num))
 	new_map.new_segmentation('segmentations/withfeatures{}/shapefilewithfeatures003-00{}-{}.shp'.format(img_num, img_num, base_seg), base_seg)
 	for seg in segs:
 		new_map.new_segmentation('segmentations/withfeatures{}/shapefilewithfeatures003-00{}-{}.shp'.format(img_num, img_num, seg), seg)
 	
-	data, names = sf.multi_segs(new_map, base_seg, segs)#sf.color_edge(new_map, base_seg)
-	X = data[:,:-1]
+	#data, names = sf.multi_segs(new_map, base_seg, segs, new_feats)#sf.color_edge(new_map, base_seg)
+	
 	if jared:
 		jared_load = np.loadtxt('jaredlabels/{}.csv'.format(img_num), delimiter = ',', dtype = 'int')
 		new_map.new_seg_mask(jared_load, base_seg, 'damage')
+		data, names = sf.multi_segs(new_map, base_seg, segs, new_feats, True)
+		X = data[:,:-1]
 		y = np.zeros(X.shape[0])
 		y[jared_load] = 1
 	else:
 		new_map.newMask('datafromjoe/1-003-00{}-damage.shp'.format(img_num), 'damage')
+		data, names = sf.multi_segs(new_map, base_seg, segs, new_feats, True)
+		X = data[:,:-1]
 		y = data[:,-1]>255*thresh	
+
 	return new_map, X, y, names
 
 
@@ -85,17 +90,39 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 	return full_predict
 	
 
-def test(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5, jared = True, new_feats=True, EVEN = True):
+def test(n_trees = 1000, base_seg = 50, segs = [100], thresh = .01, jared = True, new_feats=True, EVEN = True):
+	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared, new_feats)
+	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared, new_feats)
+
+	full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, jared, new_feats, EVEN)
+	full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees, jared, new_feats, EVEN)
+
+def compare(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5, jared = True, new_feats=True, EVEN = True):
+	jared = True
 	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared)
 	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared)
 	
-	print("2,3")
+	print("jared")
 	pred1 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, jared, new_feats, EVEN)
 
-	print('3,2')
-	pred2 = full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees, jared, new_feats, EVEN)
+	jared = False
+	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared)
+	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared)
+
+	print('joe')
+	pred2 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, jared, new_feats, EVEN)
+
+	#pred2 = full_run(map_test, X_test, y_test, map_train, X_train, y_train, names, base_seg, n_trees, jared, new_feats, EVEN)
+
+	plt.figure('Difference')
+	diff = pred1-pred2
+	plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
+	plt.show()
 
 
 if __name__ == '__main__':
-	test(jared = True, EVEN = True)
-	test(jared = False, EVEN = False)
+	test(jared = True, EVEN = True, new_feats = False)
+	test(jared = True, EVEN = False, new_feats = False)
+	test(jared = False, EVEN = True, new_feats = False)
+	test(jared = False, EVEN = False, new_feats = False)
+	

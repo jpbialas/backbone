@@ -7,10 +7,11 @@ import os
 
 
 
-def color_edge(my_map, seg):
+def color_edge(my_map, seg, joes_labels):
+	print joes_labels
 	names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
 	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
-	if os.path.exists(p):
+	if os.path.exists(p) and joes_labels:
 		data = np.load(p)
 	else:
 		pbar = custom_progress()
@@ -132,27 +133,32 @@ def shapes(my_map, level):
 	return data, names
 	
 
-def multi_segs(my_map, base_seg, seg_levels):
+def multi_segs(my_map, base_seg, seg_levels, use_james = True, joes_labels = True):
 	img = my_map.img
 	img_num = my_map.name[-1]
 	h,w,_ = img.shape
 	segs = my_map.segmentations[base_seg][1].ravel().astype('int')
 	n_segs = int(np.max(segs))
 	pbar = custom_progress()
-	color_data, color_names = color_edge(my_map, base_seg)
+	color_data, color_names = color_edge(my_map, base_seg, joes_labels)
 	shape_data, shape_names = shapes(my_map, base_seg)
 	hog_data, hog_names = hog(my_map, base_seg)
-	james_data, james_names = features_from_james(img_num, base_seg)
-	data = np.concatenate((james_data,shape_data, hog_data, color_data), axis = 1)
+	if use_james:
+		james_data, james_names = features_from_james(img_num, base_seg)
+		data = np.concatenate((james_data,shape_data, hog_data, color_data), axis = 1)
+		names = np.concatenate((james_names, shape_names, hog_names, color_names), axis = 0)
+	else:
+		data = np.concatenate((shape_data, hog_data, color_data), axis = 1)
+		names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
 
-	names = np.concatenate((james_names, shape_names, hog_names, color_names), axis = 0)
+	
 	if len(seg_levels)>0:
 		for seg in seg_levels:
 			segmentation = my_map.segmentations[seg][1].ravel().astype('int')
 			m_segs = int(np.max(segmentation))
 			convert = np.zeros(n_segs+1).astype('int')
 			convert[segs] = segmentation
-			color_data, color_names = color_edge(my_map, seg)
+			color_data, color_names = color_edge(my_map, seg, joes_labels)
 			color_data = color_data[:,:-1]
 			shape_data, shape_names = shapes(my_map, seg)
 			hog_data, hog_names = hog(my_map, seg)

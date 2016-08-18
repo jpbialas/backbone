@@ -21,8 +21,8 @@ def basic_setup(segs = [], base_seg = 50, jared = False):
 
 
 	
-	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
-	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(seg), seg)
+	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(base_seg), base_seg)
+	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(base_seg), base_seg)
 
 
 	for seg in segs:

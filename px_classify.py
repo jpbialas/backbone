@@ -78,11 +78,34 @@ def gen_features(myMap, edge_k, hog_k, hog_bins):
 
 
 
-def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
-	model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, EVEN, verbose)
-	return test(map_test, model, labels, mask_test, frac_test, edge_k, hog_k, nbins, n_trees, EVEN, verbose)
+def train_and_test(map_train, map_test, mask_train = 'damage', mask_test = 'damage', frac_train = 0.01, frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, jared = True, verbose = True):
 
-def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
+
+	label_name = "Jared" if jared else "Joe"
+	img_num = map_test.name[-1]
+	model_name = analyze_results.gen_model_name("Px", label_name, EVEN, img_num, False)
+	p = 'PXpredictions/'+model_name+'_probs.npy'
+
+	if os.path.exists(p):
+		v_print ("loading results", verbose)
+		prediction = np.load(p)
+		#testing_suite(map_test, prediction, model_name)
+
+	else:
+		v_print ("Running Tests", verbose)
+		model, labels, _ = train(map_train, mask_train,frac_train,  edge_k, hog_k, nbins, n_trees, EVEN, verbose)
+		model, X_test, prediction, labels = test(map_test, model, labels, mask_test, frac_test, edge_k, hog_k, nbins, n_trees, EVEN, jared, verbose)
+	return prediction
+
+def testing_suite(map_test, prediction_prob, model_name):
+	heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, model_name, save = True)
+	analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, model_name, save = True)
+
+
+	map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
+	sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', model_name, True)
+
+def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, jared = True,  verbose = True):
 	v_print('Starting test gen', verbose)
 	X_test, labels = gen_features(map_test, edge_k, hog_k, nbins)
 	v_print('Done test gen', verbose)
@@ -93,29 +116,26 @@ def test(map_test, model, labels, mask_test = 'damage', frac_test = 0.01, edge_k
 	else:
 		test = np.arange(n_test)
 
+
+	img_num = map_test.name[-1]
+	label_name = "Jared" if jared else "Joe"
+	model_name = analyze_results.gen_model_name("Px", label_name, EVEN, img_num, False)
+
 	ground_truth = y_test[test]
 	v_print('Starting Predction', verbose)
 	prediction_prob = model.predict_proba(X_test[test])[:,1]
 	v_print("Done with Prediction", verbose)
-	np.save(os.path.join('temp', "prediction_{}.npy".format(map_test.name)), prediction_prob)
 
-
-	img_num = map_test.name[-1]
-	label_name = "Jared" if jared else "Joe"
-	model_name = analyze_results.gen_model_name("Px", label_name, EVEN, img_num, new_feats)
 
 	if frac_test == 1:
-		heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, model_name, True)
-		analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, roc_name, model_name, True)
-
-		map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
-		sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', model_name, True)
+		np.save('PXpredictions/'+model_name+'_probs.npy', prediction_prob)
+		testing_suite(map_test, prediction_prob, model_name)
 	else:
 		v_print("Done Testing", verbose)
 		prediction = prediction_prob>.4
 		v_print (analyze_results.prec_recall(ground_truth, prediction), verbose)
 
-	return model, X_test, y_test, labels	
+	return model, X_test, prediction_prob, labels	
 
 def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog_k = 50, nbins = 16, n_trees = 85, EVEN = True, verbose = True):
 	v_print('Starting train gen', verbose)
@@ -138,27 +158,51 @@ def train(map_train, mask_train = 'damage',frac_train = 0.01,  edge_k = 100, hog
 	return model, labels, X_train
 
 
+def main_test_new(EVEN, jared):
+	map_test, map_train = map_overlay.basic_setup([100], 50, jared)
+	
+	frac_test = 1
+
+	pred1 = train_and_test(map_train, map_test, frac_test = 1, EVEN = True, jared = True, verbose = True)
+	pred2 = train_and_test(map_train, map_test, frac_test = 1, EVEN = True, jared = False, verbose = True)
+
+	print pred1.shape, pred2.shape
+	plt.figure('Difference')
+	diff = (pred1-pred2).reshape((map_test.rows, map_test.cols))
+	plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
+	plt.show()
 	
 
-def main_test():
-	map_train, map_test = map_overlay.basic_setup([50], 50, jared = False)
-	#fit_to_segs(map_test)
+def main_test(EVEN, jared):
+	map_train, map_test = map_overlay.basic_setup([100], 50, jared)
+	#fit_to_Ts(map_test)
 	#fit_to_segs(map_train)
 	#plt.show()
+	frac_test = 1
 
-	model, X, y1, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = False, verbose = False)
-	analyze_results.feature_importance(model, names, X)
+	train_and_test(map_train, map_test, frac_test = 1, EVEN = EVEN, jared = jared, verbose = True)
+	train_and_test(map_test, map_train, frac_test = 1, EVEN = EVEN, jared = jared, verbose = True)
+
+	#model, X, y2, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = False, jared = True, verbose = True)
+
+	#model, X, y1, names = train_and_test(map_train, map_test, frac_test = 1, EVEN = False, jared = True, verbose = True)
+	#analyze_results.feature_importance(model, names, X)
 
 
-	model, X, y2, names = train_and_test(map_test, map_train, frac_test = 1, EVEN = False, verbose = False)
-	analyze_results.feature_importance(model, names, X)
+	#analyze_results.feature_importance(model, names, X)
 
 	#plt.show()
 
-	plt.show()
 
 if __name__ == "__main__":
-	main_test()
+	print('1')
+	main_test(EVEN  = True, jared = True)
+	print('2')
+	main_test(EVEN = True, jared = False)
+	print('3')
+	main_test(EVEN = False, jared = True)
+	print('4')
+	main_test(EVEN = False, jared = False)
 
 
 	
