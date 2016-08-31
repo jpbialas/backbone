@@ -16,6 +16,16 @@ def px2seg_labels(my_map, seg):
 		data[segs[i]] += labels[i]
 	return data/counts
 
+def px2seg2(values, indcs):
+	pbar = custom_progress()
+	n_segs = int(np.max(indcs))+1
+	counts = np.bincount(indcs.ravel().astype('int'))
+	counts = counts.reshape(counts.shape[0], 1)
+	data = np.zeros((n_segs, values.shape[1]), dtype = 'float')
+	for i in pbar(range(values.shape[0])):
+		data[indcs[i]] += values[i]
+	return data/counts
+
 def px2seg(values, indcs):
 	pbar = custom_progress()
 	n_segs = int(np.max(indcs))+1
@@ -24,6 +34,7 @@ def px2seg(values, indcs):
 		indices = np.where(indcs == i)[0]
 		data[i] = np.sum(values[indices], axis = 0)/indices.shape[0]
 	return data
+
 
 
 def color_edge(my_map, seg, joes_labels):
