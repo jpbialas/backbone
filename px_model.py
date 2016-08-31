@@ -123,9 +123,9 @@ class PxClassifier():
         std = np.std([tree.feature_importances_ for tree in self.model.estimators_],
                      axis=0)
         indices = np.argsort(importances)[::-1]
-        print("Feature ranking:")
+        v_print("Feature ranking:", self.verbose)
         for f in range(len(self.feat_names)):
-            print("{}. feature {}: ({})".format(f + 1, self.feat_names[indices[f]], importances[indices[f]]))
+            v_print("{}. feature {}: ({})".format(f + 1, self.feat_names[indices[f]], importances[indices[f]]), self.verbose)
         plt.figure()
         plt.title("Feature importances")
         plt.bar(range(len(self.feat_names)), importances[indices],

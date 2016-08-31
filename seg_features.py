@@ -5,18 +5,14 @@ import json
 from convenience_tools import *
 import os
 
-def px2seg_labels(my_map, seg):
-	pbar = custom_progress()
-	segs = my_map.segmentations[seg][1].ravel()
-	n_segs = int(np.max(segs))+1
-	labels = my_map.getLabels('damage').ravel()
-	counts = np.bincount(segs.ravel().astype('int'))
-	data = np.zeros(n_segs, dtype = 'float')
-	for i in pbar(range(labels.shape[0])):
-		data[segs[i]] += labels[i]
-	return data/counts
+
 
 def px2seg2(values, indcs):
+	'''
+		See px2seg
+		This implementation is faster for larger numbers of segments. The original is
+		better for smaller numbers of segments because each segment is computed by numpy
+	'''
 	pbar = custom_progress()
 	n_segs = int(np.max(indcs))+1
 	counts = np.bincount(indcs.ravel().astype('int'))
@@ -27,6 +23,15 @@ def px2seg2(values, indcs):
 	return data/counts
 
 def px2seg(values, indcs):
+	'''
+		values: an array of length n, which is a raveled image of pixel values
+		indcs: an array of length n which contains the index of which of the k segments that that 
+				pixel belongs to
+		RETURNS: An array of length k where each element holds the average of all values of pixels
+				with the corresponding index
+
+		Used for finding average color of each segment or fitting a pixel-based labelling to segents
+	'''
 	pbar = custom_progress()
 	n_segs = int(np.max(indcs))+1
 	data = np.zeros((n_segs, values.shape[1]), dtype = 'float')
@@ -36,31 +41,38 @@ def px2seg(values, indcs):
 	return data
 
 
-
-def color_edge(my_map, seg, joes_labels):
-	print joes_labels
+def color_edge(my_map, seg):
+	'''
+		my_map: map holding the image to extract features from
+		seg: Segmentation level to find features for
+		RETURNS:
+			Average color and edge density for each segment
+			Names of those features
+	'''
 	names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
 	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
-	if os.path.exists(p) and joes_labels:
+	if os.path.exists(p):
 		data = np.load(p)
 	else:
 		edges = cv2.Canny(my_map.img,50,100).reshape((my_map.rows,my_map.cols, 1))
-		labels = my_map.getLabels('damage').reshape(my_map.rows, my_map.cols, 1)*255
-		color_e = np.concatenate((my_map.img, edges, labels), axis = 2).reshape((my_map.rows*my_map.cols, 5))
+		color_e = np.concatenate((my_map.img, edges), axis = 2).reshape((my_map.rows*my_map.cols, 4))
 		segs = my_map.segmentations[seg][1].ravel()
-		'''pbar = custom_progress()
-		n_segs = int(np.max(segs))+1
-		data = np.zeros((n_segs, 5))
-		for i in pbar(range(n_segs)):
-			indices = np.where(segs == i)[0]
-			data[i] = np.sum(color_e[indices], axis = 0)/indices.shape[0]'''
-		data = px2seg(color_e, segs)
-		if joes_labels:
-			np.save(p, data)
+		if seg <= 50:
+			data = px2seg2(color_e, segs)
+		else:
+			data = px2seg(color_e, segs)
+		np.save(p, data)
 	return data, names
 
 
-def features_from_james(img_num, seg):
+def ecognition_features(img_num, seg):
+	'''
+		img_num: image number of map to extract features from
+		seg: Segmentation level to find features for
+		RETURNS:
+			All features extracted from ecognition
+			Names for ecognition features
+	'''
 	json_file = open('segmentations/withfeatures{}/{}-{}-features.json'.format(img_num, img_num, seg))
 	json_str = json_file.read()
 	#print json_str
@@ -77,6 +89,10 @@ def features_from_james(img_num, seg):
 	return data, names
 
 def show_shapes(my_map, rect, ellipse, n_segs, level):
+	'''
+		Not used:
+		Draws rectangle and ellipse contours around each segment
+	'''
 	test = np.zeros(n_segs)
 	test[i] = 1
 	img = my_map.mask_segments(test, level, with_img = True)
@@ -88,6 +104,13 @@ def show_shapes(my_map, rect, ellipse, n_segs, level):
 	cv2.waitKey(1000)
 
 def hog(my_map, seg):
+	'''
+		my_map: map holding the image to extract features from
+		seg: Segmentation level to find features for
+		RETURNS:
+			HoG for each segment
+			Names of those features
+	'''
 	bins = 16
 	names = []
 	for i in range(bins):
@@ -113,6 +136,13 @@ def hog(my_map, seg):
 
 
 def shapes(my_map, level):
+	'''
+		my_map: map holding the image to extract features from
+		seg: Segmentation level to find features for
+		RETURNS:
+			Rectangle and Ellipse fits for each segment
+			Names of those features
+	'''
 	names = np.array(['re{}'.format(level),'rf{}'.format(level),'ee{}'.format(level),'ef{}'.format(level)])
 	p = os.path.join('features', "aspect_extent_{}.npy".format(my_map.segmentations[level][0]))
 	if os.path.exists(p):
@@ -164,53 +194,44 @@ def shapes(my_map, level):
 	return data, names
 	
 
-def multi_segs(my_map, base_seg, seg_levels, use_james = True, joes_labels = True):
+def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
+	'''
+		my_map: map holding the image to extract features from
+		base_seg: Segmentation level to find features for
+		seg_levels: Additional segmentation levels to extract context features from
+		ecognition: Boolean indicating whether to use ecognition features
+		RETURNS:
+			All features for each segment and context segments
+			Names of those features
+	'''
 	img = my_map.img
 	img_num = my_map.name[-1]
 	h,w,_ = img.shape
 	segs = my_map.segmentations[base_seg][1].ravel().astype('int')
 	n_segs = int(np.max(segs))
 	pbar = custom_progress()
-	color_data, color_names = color_edge(my_map, base_seg, joes_labels)
+	color_data, color_names = color_edge(my_map, base_seg)
 	shape_data, shape_names = shapes(my_map, base_seg)
 	hog_data, hog_names = hog(my_map, base_seg)
-	if use_james:
-		james_data, james_names = features_from_james(img_num, base_seg)
+	if ecognition:
+		james_data, james_names = ecognition_features(img_num, base_seg)
 		data = np.concatenate((james_data,shape_data, hog_data, color_data), axis = 1)
 		names = np.concatenate((james_names, shape_names, hog_names, color_names), axis = 0)
 	else:
 		data = np.concatenate((shape_data, hog_data, color_data), axis = 1)
-		names = np.concatenate((shape_names, hog_names, color_names), axis = 0)
-
-	
+		names = np.concatenate((shape_names, hog_names, color_names), axis = 0)	
 	if len(seg_levels)>0:
 		for seg in seg_levels:
 			segmentation = my_map.segmentations[seg][1].ravel().astype('int')
 			m_segs = int(np.max(segmentation))
 			convert = np.zeros(n_segs+1).astype('int')
 			convert[segs] = segmentation
-			color_data, color_names = color_edge(my_map, seg, joes_labels)
-			color_data = color_data[:,:-1]
+			color_data, color_names = color_edge(my_map, seg)
 			shape_data, shape_names = shapes(my_map, seg)
 			hog_data, hog_names = hog(my_map, seg)
-
-			#james_data, james_names = features_from_james(img_num, seg)
-			#james_names = [s + str(seg) for s in james_names]
-
 			next_data = np.concatenate((shape_data, color_data), axis = 1)[convert]
 			next_names = np.concatenate((shape_names, color_names), axis = 0)
-			#next_data = color_data[convert]
-			#next_names = color_names
 			data = np.concatenate((next_data, data), axis = 1)
 			names = np.concatenate((next_names, names), axis = 0)
 	return data, names
 
-
-def visualize_segments(my_map, data, seg_level, name, position):
-	pbar = custom_progress()
-	segs = my_map.segmentations[seg_level][1]
-	full_image = np.clip(data[segs.astype('int')],0,1)
-	#print max(data), min(data), max(full_image.ravel()), min(full_image.ravel())
-	plt.subplot(position)
-	plt.title(name), plt.xticks([]), plt.yticks([])
-	plt.imshow(full_image, cmap = 'gray')

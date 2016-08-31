@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
+from convenience_tools import *
 
 
 
@@ -39,32 +40,37 @@ class ObjectClassifier():
 
     def _get_X_y(self, next_map, label_name):
         img_num = next_map.name[-1]
-        data, feat_names = sf.multi_segs(next_map, self.params['base_seg'], self.params['segs'], self.params['new_feats'], True)
+        X, feat_names = sf.multi_segs(next_map, self.params['base_seg'], self.params['segs'], self.params['new_feats'])
         damage_indices = np.loadtxt('damagelabels50/{}-3-{}.csv'.format(label_name, img_num), delimiter = ',', dtype = 'int')
         self.feat_names = feat_names
-        X = data[:,:-1]
         y = np.zeros(X.shape[0])
         y[damage_indices] = 1
         return X, y
 
     def testing_suite(self, map_test, prediction_prob):
+        v_print('generating visuals', self.verbose)
         heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = True)
         analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
         map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
         sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, True)
+        v_print('done generating visuals', self.verbose)
 
     def fit(self, map_train, label_name = "Jared"):
+        v_print('starting fit', self.verbose)
         X, y = self._get_X_y(map_train, label_name)
         samples = self.sample(y, self.params['EVEN']) 
         self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
         self.model.fit(X[samples], y[samples])
+        v_print('ending fit', self.verbose)
 
     def predict_proba(self, map_test, label_name = 'Jared'):
+        v_print('starting predict', self.verbose)
         X, y = self._get_X_y(map_test, label_name)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, True)
         segment_probs = self.model.predict_proba(X)[:,1]
         px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
+        v_print('ending predict', self.verbose)
         return px_probs
     
     def predict(self, map_test, label_name = "Jared", thresh = .5):
@@ -75,16 +81,18 @@ class ObjectClassifier():
         return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
+    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
-    ob_clf1.testing_suite(jared_test, pred_jared)
+    #ob_clf1.testing_suite(jared_test, pred_jared)
+    analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = True)
 
-    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Noise0.3")
+    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Noise0.5")
     ob_clf2 = ObjectClassifier()
-    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Noise0.3")
-    ob_clf2.testing_suite(joe_test, pred_joe)
+    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Noise0.5")
+    analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = True)
+    #ob_clf2.testing_suite(joe_test, pred_joe)
 
 
     analyze_results.compare_heatmaps(pred_jared, pred_joe)

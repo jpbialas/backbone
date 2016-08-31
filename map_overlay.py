@@ -7,13 +7,6 @@ import os
 from convenience_tools import *
 
 
-''''
-from map_overlay import MapOverlay
-map_test = MapOverlay('datafromjoe/1-0003-0002.tif')
-map_test.new_segmentation('segmentations/withfeatures2/2-1000-features.json', 1000)
-
-
-'''
 def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
 	#Generate Maps
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
