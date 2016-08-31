@@ -86,12 +86,12 @@ if __name__ == '__main__':
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     #ob_clf1.testing_suite(jared_test, pred_jared)
-    analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = True)
+    #analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = True)
 
-    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Noise0.5")
+    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
     ob_clf2 = ObjectClassifier()
-    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Noise0.5")
-    analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = True)
+    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Joe")
+    #analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = True)
     #ob_clf2.testing_suite(joe_test, pred_joe)
 
 
