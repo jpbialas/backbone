@@ -114,9 +114,9 @@ class PxClassifier():
     def predict(self, map_test, label_name = "Jared", thresh = .5):
         return self.predict_proba(map_test, label_name)>thresh
 
-    def fit_and_predict(self, map_train, map_test):
-        self.fit(map_train)
-        return self.prediction_prob(map_test)
+    def fit_and_predict(self, map_train, map_test, label_name = "Jared"):
+        self.fit(map_train, label_name)
+        return self.prediction_prob(map_test, label_name)
 
     def feature_importance(self):
         importances = self.model.feature_importances_

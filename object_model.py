@@ -47,6 +47,11 @@ class ObjectClassifier():
         y[damage_indices] = 1
         return X, y
 
+    def testing_suite(self, map_test, prediction_prob):
+        heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = True)
+        analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
+        map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
+        sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, True)
 
     def fit(self, map_train, label_name = "Jared"):
         X, y = self._get_X_y(map_train, label_name)
@@ -57,36 +62,30 @@ class ObjectClassifier():
     def predict_proba(self, map_test, label_name = 'Jared'):
         X, y = self._get_X_y(map_test, label_name)
         img_num = map_test.name[-1]
-        model_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, True)
+        self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, True)
         segment_probs = self.model.predict_proba(X)[:,1]
         px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
         return px_probs
+    
+    def predict(self, map_test, label_name = "Jared", thresh = .5):
+        return self.predict_proba(map_test, label_name)>thresh
 
+    def fit_and_predict(self, map_train, map_test, label_name = 'Jared'):
+        self.fit(map_train, label_name)
+        return self.prediction_prob(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
+    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
+
     ob_clf1 = ObjectClassifier()
-    ob_clf1.fit(jared_train, "Jared")
-    pred_jared = ob_clf1.predict_proba(jared_test, "Jared")
-
-
-    analyze_results.probability_heat_map(jared_test, pred_jared, 'Jared Heatmap', False)
-    analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, 'Jared ROC', save = False)
-    jared_test.newPxMask(pred_jared.ravel()>.7, 'damage_pred')
-    sbs_fig = analyze_results.side_by_side(jared_test, 'damage', 'damage_pred', "Jared SBS", save = False)
-
+    pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    ob_clf1.testing_suite(jared_test, pred_jared)
 
     joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
     ob_clf2 = ObjectClassifier()
-    ob_clf2.fit(joe_train, "Joe")
-    pred_joe = ob_clf2.predict_proba(joe_test, "Joe")
+    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Joe")
+    ob_clf2.testing_suite(joe_test, pred_joe)
 
-
-    analyze_results.probability_heat_map(joe_test, pred_joe, 'Joe Heatmap', False)
-    analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, 'Joe ROC', save = False)
-    joe_test.newPxMask(pred_joe.ravel()>.7, 'damage_pred')
-    sbs_fig = analyze_results.side_by_side(joe_test, 'damage', 'damage_pred', "Joe SBS", save = False)
-    analyze_results.probability_heat_map(joe_test, pred_joe, 'Joe Heatmap', False)
 
     analyze_results.compare_heatmaps(pred_jared, pred_joe)
     plt.show()

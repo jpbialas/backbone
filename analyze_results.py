@@ -131,7 +131,7 @@ def test_thresholds():
 
 #test_thresholds()
 
-def side_by_side(myMap, mask_true, mask_predict, name, save = True):
+def side_by_side(myMap, mask_true, mask_predict, name, save = False):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	plt.subplot(121),plt.imshow(myMap.maskImg(mask_true))
@@ -142,7 +142,7 @@ def side_by_side(myMap, mask_true, mask_predict, name, save = True):
 		fig.savefig('Compare Methods/{}_sbs.png'.format(name), format='png', dpi = 2400)
 	return fig
 
-def probability_heat_map(map_test, full_predict, name, save = True):
+def probability_heat_map(map_test, full_predict, name, save = False):
 	fig = plt.figure()
 	fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
 	ground_truth = map_test.getLabels('damage')
@@ -153,7 +153,7 @@ def probability_heat_map(map_test, full_predict, name, save = True):
 		fig.savefig('Compare Methods/{}_heatmap.png'.format(name), format='png', dpi = 2400)
 	return fig
 
-def ROC(map_test, ground_truth, full_predict, name, save = True):
+def ROC(map_test, ground_truth, full_predict, name, save = False):
 	'''FPRs, FNRs = [], []
 	pbar = custom_progress()
 	fig = plt.figure('FPR v FNR {}'.format(map_test.name[-1]))
@@ -171,9 +171,6 @@ def ROC(map_test, ground_truth, full_predict, name, save = True):
 	plt.ylabel('True Positive Rate')
 	plt.axis([0, 1, 0, 1])
 	indx = np.argmin(FPRs**2 + (1-TPRs)**2)
-	print threshs[indx]
-	print FPRs[indx]
-	print TPRs[indx]
 	if save:
 		fig.savefig('Compare Methods/{}_ROC.png'.format(name), format='png', dpi = 2400)
 		np.save('Compare Methods/'+name+'.npy', (FPRs, TPRs, threshs))

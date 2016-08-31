@@ -5,14 +5,26 @@ import json
 from convenience_tools import *
 import os
 
-def px2seg_labels():
-	data = np.zeros((n_segs, 5))
+def px2seg_labels(my_map, seg):
+	pbar = custom_progress()
+	segs = my_map.segmentations[seg][1].ravel()
+	n_segs = int(np.max(segs))+1
+	labels = my_map.getLabels('damage').ravel()
 	counts = np.bincount(segs.ravel().astype('int'))
-	print counts
-	print np.where(color_e[:,-1]>0)[0].shape
-	for i in pbar(range(segs.shape[0])):
-		data[segs[i]] += color_e[i]
-	data=data/np.expand_dims(counts,1).astype('float')
+	data = np.zeros(n_segs, dtype = 'float')
+	for i in pbar(range(labels.shape[0])):
+		data[segs[i]] += labels[i]
+	return data/counts
+
+def px2seg(values, indcs):
+	pbar = custom_progress()
+	n_segs = int(np.max(indcs))+1
+	data = np.zeros((n_segs, values.shape[1]), dtype = 'float')
+	for i in pbar(range(n_segs)):
+		indices = np.where(indcs == i)[0]
+		data[i] = np.sum(values[indices], axis = 0)/indices.shape[0]
+	return data
+
 
 def color_edge(my_map, seg, joes_labels):
 	print joes_labels
@@ -21,16 +33,17 @@ def color_edge(my_map, seg, joes_labels):
 	if os.path.exists(p) and joes_labels:
 		data = np.load(p)
 	else:
-		pbar = custom_progress()
 		edges = cv2.Canny(my_map.img,50,100).reshape((my_map.rows,my_map.cols, 1))
 		labels = my_map.getLabels('damage').reshape(my_map.rows, my_map.cols, 1)*255
 		color_e = np.concatenate((my_map.img, edges, labels), axis = 2).reshape((my_map.rows*my_map.cols, 5))
 		segs = my_map.segmentations[seg][1].ravel()
+		'''pbar = custom_progress()
 		n_segs = int(np.max(segs))+1
-		data = np.zeros((n_segs, 5), dtype = 'uint8')
+		data = np.zeros((n_segs, 5))
 		for i in pbar(range(n_segs)):
 			indices = np.where(segs == i)[0]
-			data[i] = np.sum(color_e[indices], axis = 0)/indices.shape[0]
+			data[i] = np.sum(color_e[indices], axis = 0)/indices.shape[0]'''
+		data = px2seg(color_e, segs)
 		if joes_labels:
 			np.save(p, data)
 	return data, names
