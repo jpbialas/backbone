@@ -86,6 +86,10 @@ def prec_recall(y_true, y_pred):
 	FNR = 1-recall
 	return round(precision, 5), round(recall, 5), round(accuracy, 5), round(f1, 5)
 
+def compare_heatmaps(pred1, pred2):
+	plt.figure('Difference')
+	diff = pred1-pred2
+	plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
 
 def test_thresholds():
 	print("loading")

@@ -14,30 +14,19 @@ map_test.new_segmentation('segmentations/withfeatures2/2-1000-features.json', 10
 
 
 '''
-def basic_setup(segs = [], base_seg = 50, jared = False):
-
+def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
+	#Generate Maps
 	map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
 	map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
-
-
-	
+	#Add Segmentations
 	map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(base_seg), base_seg)
 	map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(base_seg), base_seg)
-
-
 	for seg in segs:
 		map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(seg), seg)
 		map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(seg), seg)
-
-	if not jared:
-		map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
-		map_test.newMask('datafromjoe/1-003-003-damage.shp', 'damage')
-
-	if jared:
-		map_train.new_seg_mask(np.loadtxt('jaredlabels/2.csv', delimiter = ','), base_seg, 'damage')
-		map_test.new_seg_mask(np.loadtxt('jaredlabels/3.csv', delimiter = ','), base_seg, 'damage')
-
-
+	#Add Damage Labels
+	map_train.new_seg_mask(np.loadtxt('damagelabels50/{}-3-2.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
+	map_test.new_seg_mask(np.loadtxt('damagelabels50/{}-3-3.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
 	return map_train, map_test
 
 

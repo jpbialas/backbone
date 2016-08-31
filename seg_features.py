@@ -5,52 +5,14 @@ import json
 from convenience_tools import *
 import os
 
-def test(data, segs, color_e, counts, i):
-	data[segs[i]] += color_e[i]
-	counts[segs[i]] += 1
-
-def color_edge_(my_map, seg, joes_labels = True):
-	print joes_labels
-	names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
-	p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
-	if os.path.exists(p) and joes_labels:
-		data = np.load(p)
-	else:
-		pbar = custom_progress()
-		edges = cv2.Canny(my_map.img,50,100).reshape((my_map.rows,my_map.cols, 1))
-		labels = my_map.getLabels('damage').reshape(my_map.rows, my_map.cols, 1)*255
-		color_e = np.concatenate((my_map.img, edges, labels), axis = 2).reshape((my_map.rows*my_map.cols, 5))
-		segs = my_map.segmentations[seg][1].ravel()
-		n_segs = int(np.max(segs))+1
-		data = np.zeros((n_segs, 5), dtype = 'uint8')
-		counts = np.zeros((n_segs,1), dtype = 'float')
-		'''
-		for i in pbar(range(segs.shape[0])):
-			data[segs[i]] += color_e[i]
-			counts[segs[i]] += 1
-		'''
-
-
-		import multiprocessing
-		import datetime
-		import functools
-
-		pool = multiprocessing.Pool()
-		print counts
-		f = functools.partial(test, data, segs, color_e, counts)
-		start = datetime.datetime.now()
-		print start
-		map(f, range(segs.shape[0]))
-		end = datetime.datetime.now()
-		print end-start
-		print counts
-		print data, counts
-
-		data = data/counts
-		np.save(p, data)
-	return data, names
-            
-
+def px2seg_labels():
+	data = np.zeros((n_segs, 5))
+	counts = np.bincount(segs.ravel().astype('int'))
+	print counts
+	print np.where(color_e[:,-1]>0)[0].shape
+	for i in pbar(range(segs.shape[0])):
+		data[segs[i]] += color_e[i]
+	data=data/np.expand_dims(counts,1).astype('float')
 
 def color_edge(my_map, seg, joes_labels):
 	print joes_labels
@@ -66,20 +28,11 @@ def color_edge(my_map, seg, joes_labels):
 		segs = my_map.segmentations[seg][1].ravel()
 		n_segs = int(np.max(segs))+1
 		data = np.zeros((n_segs, 5), dtype = 'uint8')
-
-		'''
 		for i in pbar(range(n_segs)):
 			indices = np.where(segs == i)[0]
-			data[i] = np.sum(color_e[indices], axis = 0)/indices.shape[0]'''
-
-		def test(i):
-			indices = np.where(segs == i)[0]
 			data[i] = np.sum(color_e[indices], axis = 0)/indices.shape[0]
-		import datetime
-		start = datetime.datetime.now()
-		map(test, range(n_segs))
-		print datetime.datetime.now()-start
-		np.save(p, data)
+		if joes_labels:
+			np.save(p, data)
 	return data, names
 
 
@@ -93,10 +46,9 @@ def features_from_james(img_num, seg):
 	n_feats = len(json_data['features'][0]['properties'].values())
 
 	data = np.zeros((n_segs, n_feats))
-	pbar = custom_progress()
 	json_features = json_data['features']
 	names = json_features[0]['properties'].keys()
-	for i in pbar(range(n_segs)):
+	for i in range(n_segs):
 		data[i] = json_features[i]['properties'].values()
 	return data, names
 

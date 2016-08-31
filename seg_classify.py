@@ -33,11 +33,14 @@ def setup_segs(img_num, base_seg, segs, thresh, jared = False, new_feats = True)
 		y = np.zeros(X.shape[0])
 		y[jared_load] = 1
 	else:
+		print 'thresh is ', thresh
 		new_map.newMask('datafromjoe/1-003-00{}-damage.shp'.format(img_num), 'damage')
-		data, names = sf.multi_segs(new_map, base_seg, segs, new_feats, True)
+		data, names = sf.multi_segs(new_map, base_seg, segs, new_feats, False)
 		X = data[:,:-1]
-		y = data[:,-1]>255*thresh	
-
+		y = data[:,-1]>255*thresh
+		print 'here'	
+		indcs = np.where(y==1)[0]
+		np.savetxt('damagelabels50/Joe-3-{}-1.csv'.format(img_num), indcs, delimiter = ',', fmt = '%d')
 	return new_map, X, y, names
 
 
@@ -76,12 +79,12 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 	analyze_results.ROC(map_test, map_test.getLabels('damage'), full_predict, model_name, save = True)
 
 
-	prediction = prediction_prob>thresh
+	'''prediction = prediction_prob>thresh
 	full_predict = (full_predict>thresh).ravel()
 
 	map_test.newPxMask(full_predict.ravel(), 'damage_pred')
 	sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', model_name, save = True)
-	
+	'''
 
 	#analyze_results.feature_importance(model, names, X_train)
 	##print full_predict.shape, y_test.shape
@@ -90,7 +93,7 @@ def full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_
 	return full_predict
 	
 
-def test(n_trees = 1000, base_seg = 50, segs = [100], thresh = .01, jared = True, new_feats=True, EVEN = True):
+def test(n_trees = 1000, base_seg = 50, segs = [100], thresh = .999, jared = True, new_feats=True, EVEN = True):
 	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared, new_feats)
 	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared, new_feats)
 
@@ -99,15 +102,15 @@ def test(n_trees = 1000, base_seg = 50, segs = [100], thresh = .01, jared = True
 
 def compare(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5, jared = True, new_feats=True, EVEN = True):
 	jared = True
-	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared)
-	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared)
+	map_train, X_train, y_train, names = setup_segs(2, base_seg, segs, thresh, jared)
+	map_test, X_test, y_test, _ = setup_segs(3, base_seg, segs,  thresh, jared)
 	
 	print("jared")
 	pred1 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, jared, new_feats, EVEN)
 
 	jared = False
-	map_train, X_train, y_train, names = setup_segs(3, base_seg, segs, thresh, jared)
-	map_test, X_test, y_test, _ = setup_segs(2, base_seg, segs,  thresh, jared)
+	map_train, X_train, y_train, names = setup_segs(2, base_seg, segs, thresh, jared)
+	map_test, X_test, y_test, _ = setup_segs(3, base_seg, segs,  thresh, jared)
 
 	print('joe')
 	pred2 = full_run(map_train, X_train, y_train, map_test, X_test, y_test, names, base_seg, n_trees, jared, new_feats, EVEN)
@@ -121,8 +124,8 @@ def compare(n_trees = 1000, base_seg = 50, segs = [100], thresh = .5, jared = Tr
 
 
 if __name__ == '__main__':
-	test(jared = True, EVEN = True, new_feats = False)
-	test(jared = True, EVEN = False, new_feats = False)
+	'''test(jared = True, EVEN = True, new_feats = False)
+	test(jared = True, EVEN = False, new_feats = False)'''
 	test(jared = False, EVEN = True, new_feats = False)
-	test(jared = False, EVEN = False, new_feats = False)
-	
+	#test(jared = False, EVEN = False, new_feats = False)
+	#compare()

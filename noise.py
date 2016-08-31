@@ -21,13 +21,20 @@ def main(img_num = 2):
     plt.imshow(noisy, cmap = 'gray')
 
     map_train.newPxMask(noisy, 'damage')
-    print "HERE"
-    data, names = sf.multi_segs(map_train, 50, [100], use_james = True, joes_labels = False)
+    '''print "HERE"
+    data, names = sf.multi_segs(map_train, 50, [], use_james = True, joes_labels = False)
+    print "here2"
     print data[:,-1]#plt.imshow(data[:, -1].reshape(dims), cmap = 'gray')
-    y = data[:,-1]>255*.1
-
+    print data.shape
+    '''
+    data = np.load('noisy_segs_data_3.npy')
+    y = data[:,-1]>.01
+    
+    #y = np.load('noisy_segs_{}.npy'.format(img_num))
     plt.figure('segmented')
-    np.save('noisy_segs.npy', y)
+    #np.save('noisy_segs_data_{}.npy'.format(img_num), data)
+    #np.save('noisy_segs_{}.npy'.format(img_num), y)
+
     plt.imshow(map_train.mask_segments(y, level = 50, with_img = False).reshape(dims), cmap = 'gray')
 
 def main2():
@@ -41,23 +48,17 @@ def main2():
 
 if __name__ == '__main__':
     #print 'done with imports'
-    map_train, X_train, y_train, names = sc.setup_segs(2, 50, [100], .5, jared = True, new_feats = True)
+    #main(2)
+    main(3)
+    map_train, X_train, y_train, names = sc.setup_segs(3, 50, [100], .5, jared = True, new_feats = True)
     dims = map_train.rows, map_train.cols
-    y = np.load('noisy_segs.npy')
+    #y = np.load('noisy_segs_3.npy')
+    #print np.shape(y)
     #print y, reduce(lambda a,b:a or b, y)
-    #plt.figure()
-    plt.imshow(map_train.mask_segments(y, level = 50, with_img = False).reshape(dims), cmap = 'gray')
-    #main()
-    #plt.figure()
-    #plt.imshow(map_train.segmentations[50][1]>20, cmap = 'gray')
-    #main2()
-    plt.show()
+ 
 
-
-
-
-    
-    '''
     plt.figure('Joe Labels')
-    map_train.newMask('datafromjoe/1-003-00{}-damage.shp'.format(img_num), 'damage2')
-    plt.imshow(map_train.masks['damage2'].reshape(dims).astype('uint8'), cmap = 'gray')'''
+    map_train.newMask('datafromjoe/1-003-00{}-damage.shp'.format(3), 'damage2')
+    plt.imshow(map_train.masks['damage2'].reshape(dims).astype('uint8'), cmap = 'gray')
+
+    plt.show()
