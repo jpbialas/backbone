@@ -72,7 +72,7 @@ class ObjectClassifier():
 
     def fit_and_predict(self, map_train, map_test, label_name = 'Jared'):
         self.fit(map_train, label_name)
-        return self.prediction_prob(map_test, label_name)
+        return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
     jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
@@ -81,9 +81,9 @@ if __name__ == '__main__':
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     ob_clf1.testing_suite(jared_test, pred_jared)
 
-    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Joe")
+    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Noise0.3")
     ob_clf2 = ObjectClassifier()
-    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Joe")
+    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Noise0.3")
     ob_clf2.testing_suite(joe_test, pred_joe)
 
 
