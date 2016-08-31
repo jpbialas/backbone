@@ -24,9 +24,34 @@ def main(my_map, start = 1, end = 10):
         np.savetxt('damagelabels50/Noise{}-3-{}.csv'.format(noise_level, img_num), indcs, fmt = '%d')
 
 
+def visualize_noise(my_map):
+    img_num = my_map.name[-1]
+    for i in range(10,11):
+        noise_level = i/10.0
+        img_name = 'damagelabels50/Noise{}-3-{}.csv'.format(noise_level, img_num)
+        plt.figure(img_name)
+        next_label = np.loadtxt(img_name, delimiter = ',')
+        next_img = my_map.mask_segments_by_indx(next_label, 50, with_img = True)
+        plt.imshow(next_img)
+
+    img_name = 'damagelabels50/Joe-3-{}.csv'.format(img_num)
+    plt.figure(img_name)
+    next_label = np.loadtxt(img_name, delimiter = ',')
+    next_img = my_map.mask_segments_by_indx(next_label, 50, with_img = True)
+    plt.imshow(next_img)
+
+    img_name = 'damagelabels50/Jared-3-{}.csv'.format(img_num)
+    plt.figure(img_name)
+    next_label = np.loadtxt(img_name, delimiter = ',')
+    next_img = my_map.mask_segments_by_indx(next_label, 50, with_img = True)
+    plt.imshow(next_img)
+
+    plt.show()
+
 
 if __name__ == '__main__':
     map_train, map_test = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    main(map_train)
+    '''main(map_train)
     main(map_test)
-    plt.show()
+    plt.show()'''
+    visualize_noise(map_train)

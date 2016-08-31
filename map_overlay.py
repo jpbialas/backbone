@@ -211,7 +211,7 @@ class MapOverlay:
             h,w = self.rows, self.cols
             adj_mask = np.logical_not(mask).reshape(h,w,1)
             overlay = self.img*adj_mask
-            return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+            return overlay#cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
         else:
             return mask
 

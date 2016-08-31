@@ -65,10 +65,10 @@ class PxClassifier():
         ave_rgb, ave_rgb_name = px_features.blurred(new_map.img, img_name = new_map.name)
         edges, edges_name = px_features.edge_density(new_map.bw_img, params['edge_k'], img_name = new_map.name, amp = 1)
         hog, hog_name = px_features.hog(new_map.bw_img, params['hog_k'], img_name = new_map.name, bins = params['nbins'])
-        v_print('Concatenating', False)
+        v_print('Concatenating', self.verbose)
         data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
         names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
-        v_print('Done Concatenating', False)
+        v_print('Done Concatenating', self.verbose)
         return data, names
 
 
@@ -95,28 +95,33 @@ class PxClassifier():
 
 
     def predict_proba(self, map_test, label_name = "Jared"):
-        v_print('Starting test gen', self.verbose)
-        X_test, feat_names = self.gen_features(map_test, self.params)
-        v_print('Done test gen', self.verbose)
-        y_test = map_test.getLabels(self.params['mask_test'])
-        n_test = y_test.shape[0]
-        test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*self.params['frac_test']))
+        v_print('Starting Predction', self.verbose)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Px", label_name, self.params['EVEN'], img_num, False)
-        ground_truth = y_test[test]
-        v_print('Starting Predction', self.verbose)
-        prediction_prob = self.model.predict_proba(X_test[test])[:,1]
+        p = 'PXpredictions/'+self.test_name+'_probs.npy'
+        if os.path.exists(p):
+            prediction_prob = np.load(p)
+        else:
+            v_print('Starting test gen', self.verbose)
+            X_test, feat_names = self.gen_features(map_test, self.params)
+            v_print('Done test gen', self.verbose)
+            y_test = map_test.getLabels(self.params['mask_test'])
+            n_test = y_test.shape[0]
+            test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*self.params['frac_test']))
+            ground_truth = y_test[test]
+            prediction_prob = self.model.predict_proba(X_test[test])[:,1]
+            if self.params['frac_test'] == 1:
+                np.save('PXpredictions/'+self.test_name+'_probs.npy', prediction_prob)
         v_print("Done with Prediction", self.verbose)
-        '''if self.params['frac_test'] == 1:
-            np.save('PXpredictions/'+self.test_name+'_probs.npy', prediction_prob)'''
         return prediction_prob
 
     def predict(self, map_test, label_name = "Jared", thresh = .5):
         return self.predict_proba(map_test, label_name)>thresh
 
     def fit_and_predict(self, map_train, map_test, label_name = "Jared"):
-        self.fit(map_train, label_name)
-        return self.prediction_prob(map_test, label_name)
+        self.fit(map_train)
+        probs = self.predict_proba(map_test, label_name)
+        return probs
 
     def feature_importance(self):
         importances = self.model.feature_importances_
@@ -136,11 +141,11 @@ class PxClassifier():
 
 if __name__ == "__main__":
     print 'setting up'
-    map_train, map_test = map_overlay.basic_setup([], label_name = "Jared")
+    map_train, map_test = map_overlay.basic_setup([], label_name = "Noise1.0")
     print 'done setting up'
     model = PxClassifier(85,-1)
-    model.fit_and_predict(map_train, map_test)
-    model.testing_suite()
+    probs = model.fit_and_predict(map_train, map_test, label_name = 'Noise1.0')
+    model.testing_suite(map_test, probs)
     plt.show()
 
 
