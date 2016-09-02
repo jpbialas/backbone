@@ -87,9 +87,19 @@ def prec_recall(y_true, y_pred):
     return round(precision, 5), round(recall, 5), round(accuracy, 5), round(f1, 5)
 
 def compare_heatmaps(pred1, pred2):
-    plt.figure('Difference')
+    fig = plt.figure('Difference')
+
+    fig.subplots_adjust(bottom=0.05, left = 0.02, right = 0.98, top = 1, wspace = 0.02, hspace = 0)
+    plt.subplot2grid((2,2),(0,0)),plt.imshow(pred2, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.title('Bad Labelling'), plt.xticks([]), plt.yticks([])
+
+    plt.subplot2grid((2,2),(0,1)),plt.imshow(pred1, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.title('Good Labelling'), plt.xticks([]), plt.yticks([])
+
     diff = pred1-pred2
-    plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
+    plt.subplot2grid((2,2),(1,0), colspan = 2),plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
+    plt.title('Difference'), plt.xticks([]), plt.yticks([])
+    
 
 def test_thresholds():
     print("loading")
@@ -152,6 +162,10 @@ def probability_heat_map(map_test, full_predict, name, save = False):
     if save:
         fig.savefig('Compare Methods/{}_heatmap.png'.format(name), format='png', dpi = 2400)
     return fig
+
+def average_class_prob(map_test, ground_truth, full_predict, name):
+    return np.sum(ground_truth.ravel().astype('float')*full_predict.ravel())/(np.sum(ground_truth.ravel()))
+
 
 def ROC(map_test, ground_truth, full_predict, name, save = False):
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())

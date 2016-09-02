@@ -74,10 +74,12 @@ class PxClassifier():
 
 
     def testing_suite(self, map_test, prediction_prob):
+        v_print('generating visuals', self.verbose)
         heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = True)
         analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
         map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
         sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, True)
+        v_print('done generating visuals', self.verbose)
 
 
     def fit(self, map_train):
@@ -107,9 +109,8 @@ class PxClassifier():
             v_print('Done test gen', self.verbose)
             y_test = map_test.getLabels(self.params['mask_test'])
             n_test = y_test.shape[0]
-            test = np.random.random_integers(0,y_test.shape[0]-1, int(n_test*self.params['frac_test']))
-            ground_truth = y_test[test]
-            prediction_prob = self.model.predict_proba(X_test[test])[:,1]
+            ground_truth = y_test
+            prediction_prob = self.model.predict_proba(X_test)[:,1]
             if self.params['frac_test'] == 1:
                 np.save('PXpredictions/'+self.test_name+'_probs.npy', prediction_prob)
         v_print("Done with Prediction", self.verbose)
@@ -141,11 +142,25 @@ class PxClassifier():
 
 if __name__ == "__main__":
     print 'setting up'
-    map_train, map_test = map_overlay.basic_setup([], label_name = "Noise1.0")
+    map_test, map_train = map_overlay.basic_setup([], label_name = "jared_with_buildings")
     print 'done setting up'
     model = PxClassifier(85,-1)
-    probs = model.fit_and_predict(map_train, map_test, label_name = 'Noise1.0')
-    model.testing_suite(map_test, probs)
+    probs_noise = model.predict_proba(map_test, label_name = 'jared_with_buildings')
+    print analyze_results.average_class_prob(map_test, map_test.getLabels('damage'), probs_noise, model.test_name)
+    #model.testing_suite(map_test, probs)
+    other_labels = map_test.getLabels('damage')
+
+
+    print 'setting up'
+    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
+    print 'done setting up'
+    model = PxClassifier(85,-1)
+    probs_jared = model.predict_proba(map_test, label_name = 'Jared')
+    print analyze_results.average_class_prob(map_test, other_labels, probs_jared, model.test_name)
+
+    print probs_jared.shape
+    dims = (map_test.rows, map_test.cols)
+    analyze_results.compare_heatmaps(probs_jared.reshape(dims), probs_noise.reshape(dims))
     plt.show()
 
 

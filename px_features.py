@@ -45,7 +45,7 @@ def normalized(data, img_name = ""):
     if os.path.exists(p):
         return np.load(p), np.array(['red', 'green', 'blue'])
     else:
-        res = (data - np.mean(data))/np.std(data)
+        res = data#(data - np.mean(data))/np.std(data)
         np.save(p, res)
         return res, np.array(['red', 'green', 'blue'])
     

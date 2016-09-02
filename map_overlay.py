@@ -127,7 +127,7 @@ class MapOverlay:
         in_ds = driver.Open(shape_fn, 0) #Second parameter makes it read only. Other option is 1
         if in_ds is None:
           print('Could not open file')
-          sys.exit(1)
+          return None
         in_lyr = in_ds.GetLayer()
 
 

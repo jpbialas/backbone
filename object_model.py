@@ -47,12 +47,12 @@ class ObjectClassifier():
         y[damage_indices] = 1
         return X, y
 
-    def testing_suite(self, map_test, prediction_prob):
+    def testing_suite(self, map_test, prediction_prob, save = True):
         v_print('generating visuals', self.verbose)
-        heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = True)
-        analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
+        heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = save)
+        analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = save)
         map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
-        sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, True)
+        sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, save)
         v_print('done generating visuals', self.verbose)
 
     def fit(self, map_train, label_name = "Jared"):
@@ -82,18 +82,20 @@ class ObjectClassifier():
 
 if __name__ == '__main__':
     jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
+    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "jared_with_buildings")
+    
+
+    ob_clf2 = ObjectClassifier()
+    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "jared_with_buildings")
+    #analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = False)
+    print analyze_results.average_class_prob(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name)
+    #ob_clf2.testing_suite(joe_test, pred_joe)
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     #ob_clf1.testing_suite(jared_test, pred_jared)
-    #analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = True)
-
-    joe_test, joe_train = map_overlay.basic_setup([100], 50, label_name = "Noise0.8")
-    ob_clf2 = ObjectClassifier()
-    pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "Noise0.8")
-    #analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = True)
-    #ob_clf2.testing_suite(joe_test, pred_joe)
-
+    #analyze_results.ROC(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
+    print analyze_results.average_class_prob(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name)
 
     analyze_results.compare_heatmaps(pred_jared, pred_joe)
     plt.show()
