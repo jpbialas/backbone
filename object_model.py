@@ -67,7 +67,7 @@ class ObjectClassifier():
         v_print('starting predict', self.verbose)
         X, y = self._get_X_y(map_test, label_name)
         img_num = map_test.name[-1]
-        self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, True)
+        self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, self.params['new_feats'])
         segment_probs = self.model.predict_proba(X)[:,1]
         px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
         v_print('ending predict', self.verbose)
