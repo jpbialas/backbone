@@ -15,9 +15,9 @@ def indcs2bools(indcs, segs):
 def main():
     k = 10
 
-    p = 'ObjectNoiseProgress/randomAppend/'
+    p = 'ObjectNoiseProgress/append/'
     map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
+    building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-3.csv').astype('int')
     real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
