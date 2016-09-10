@@ -169,9 +169,12 @@ def average_class_prob(map_test, ground_truth, full_predict, name):
 
 def ROC(map_test, ground_truth, full_predict, name, save = False):
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
+    opt_thresh = threshs[np.argmin(FPRs**2 + (1-TPRs)**2)]
+
     fig = plt.figure('{} ROC {}'.format(name,map_test.name[-1]))
+    AUC = sklearn.metrics.roc_auc_score(ground_truth, full_predict.ravel())
     plt.plot(FPRs, TPRs)
-    plt.title('ROC Curve (AUC = {})'.format(round(sklearn.metrics.roc_auc_score(ground_truth, full_predict.ravel()), 5)))
+    plt.title('ROC Curve (AUC = {})'.format(round(AUC, 5)))
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.axis([0, 1, 0, 1])
@@ -179,7 +182,7 @@ def ROC(map_test, ground_truth, full_predict, name, save = False):
     if save:
         fig.savefig('Compare Methods/{}_ROC.png'.format(name), format='png', dpi = 2400)
         np.save('Compare Methods/'+name+'.npy', (FPRs, TPRs, threshs))
-    return fig
+    return fig, AUC, opt_thresh, FPRs, TPRs, threshs
 
 
 def feature_importance(model, labels, X):

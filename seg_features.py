@@ -99,7 +99,7 @@ def show_shapes(my_map, rect, ellipse, n_segs, level):
     cv2.ellipse(img = img, box = ellipse, color = [255,0,0], thickness = 5)
     box = cv2.cv.BoxPoints(rect)
     box = np.int0(box)
-    cv2.drawContours(img,[box],0,(0,0,255),2)
+    cv2.drawContours(edges,[box],0,(0,0,255),2)
     cv2.imshow("img",img)
     cv2.waitKey(1000)
 

@@ -11,6 +11,46 @@ import os
 import time
 from convenience_tools import *
 
+def bright_max_diff(img, ksize, img_name = ""):
+    '''
+    INPUT: 
+        - data: (ndarray) Data to be normalized
+    OUTPUT:
+        - (n*m ndarray) Normalized data with 0 mean and standard normal variance
+    '''
+    p = os.path.join('features', "Bright_Max_diff_{}.npy".format(img_name))
+    if os.path.exists(p):
+        return np.load(p), np.array(['Brightness','Max_diff'])
+    else:
+        r = cv2.blur(img[:,:,0], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+        g = cv2.blur(img[:,:,1], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+        b = cv2.blur(img[:,:,2], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        gray_blur = cv2.blur(gray, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+        brightness = r+g+b/3
+        max_diff = np.maximum(np.abs((r-g)/brightness), np.abs((r-b)/brightness), np.abs((g-b)/brightness))
+        res = np.dstack((brightness.ravel(), max_diff.ravel()))[0]
+        np.save(p, res)
+        return res, np.array(['Brightness', 'Max_diff'])
+
+
+def winVar(img, ksize):
+  wmean, wsqrmean = (cv2.boxFilter(x, -1, (wlen, wlen),
+    borderType=cv2.BORDER_REFLECT) for x in (img, img*img))
+  return wsqrmean - wmean*wmean
+
+
+
+def test(img, ksize, img_name = ""):
+    r = cv2.blur(img[:,:,0], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+    g = cv2.blur(img[:,:,1], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+    b = cv2.blur(img[:,:,2], ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    gray_blur = cv2.blur(gray, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+    brightness = r+g+b/3
+    print np.abs((r-g)/brightness)
+    max_diff = np.maximum(np.abs((r-g)/brightness), np.abs((r-b)/brightness), np.abs((g-b)/brightness))
+    return brightness, max_diff
 
 def edge_density(img, ksize, img_name = "", amp = 1):
     '''

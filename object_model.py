@@ -12,10 +12,10 @@ from convenience_tools import *
 
 class ObjectClassifier():
 
-    def __init__(self, verbose = 1):
+    def __init__(self, verbose = 0):
         self.verbose = verbose
         self.params = {
-            "n_trees" : 1000, 
+            "n_trees" : 85, 
             "base_seg" : 50, 
             "segs" : [100], 
             "thresh" : .5,
@@ -38,11 +38,18 @@ class ObjectClassifier():
         else:
             return np.arange(y.shape[0])
 
-    def _get_X_y(self, next_map, label_name):
+    def _get_X_y(self, next_map, label_name, custom_labels = None, custom_data = None):
         img_num = next_map.name[-1]
-        X, feat_names = sf.multi_segs(next_map, self.params['base_seg'], self.params['segs'], self.params['new_feats'])
-        damage_indices = np.loadtxt('damagelabels50/{}-3-{}.csv'.format(label_name, img_num), delimiter = ',', dtype = 'int')
-        self.feat_names = feat_names
+        if custom_data is None:
+            X, feat_names = sf.multi_segs(next_map, self.params['base_seg'], self.params['segs'], self.params['new_feats'])
+            self.feat_names = feat_names
+        else:
+            X = custom_data
+        if custom_labels is None:
+            damage_indices = np.loadtxt('damagelabels50/{}-3-{}.csv'.format(label_name, img_num), delimiter = ',', dtype = 'int')
+        else:
+            damage_indices = custom_labels
+        
         y = np.zeros(X.shape[0])
         y[damage_indices] = 1
         return X, y
@@ -55,17 +62,17 @@ class ObjectClassifier():
         sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, save)
         v_print('done generating visuals', self.verbose)
 
-    def fit(self, map_train, label_name = "Jared"):
+    def fit(self, map_train, label_name = "Jared", custom_labels = None, custom_data = None):
         v_print('starting fit', self.verbose)
-        X, y = self._get_X_y(map_train, label_name)
+        X, y = self._get_X_y(map_train, label_name, custom_labels, custom_data)
         samples = self.sample(y, self.params['EVEN']) 
         self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
 
-    def predict_proba(self, map_test, label_name = 'Jared'):
+    def predict_proba(self, map_test, label_name = 'Jared', custom_labels = None):
         v_print('starting predict', self.verbose)
-        X, y = self._get_X_y(map_test, label_name)
+        X, y = self._get_X_y(map_test, label_name, custom_labels)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, self.params['new_feats'])
         segment_probs = self.model.predict_proba(X)[:,1]
@@ -87,14 +94,14 @@ if __name__ == '__main__':
 
     ob_clf2 = ObjectClassifier()
     pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "jared_with_buildings")
-    #analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = False)
+    analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = False)
     print analyze_results.average_class_prob(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name)
     #ob_clf2.testing_suite(joe_test, pred_joe)
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     #ob_clf1.testing_suite(jared_test, pred_jared)
-    #analyze_results.ROC(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
+    analyze_results.ROC(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
     print analyze_results.average_class_prob(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name)
 
     analyze_results.compare_heatmaps(pred_jared, pred_joe)

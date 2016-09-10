@@ -51,7 +51,7 @@ class PxClassifier():
         return final_set
 
 
-    def gen_features(self, new_map, params):
+    def gen_features(self, new_map, params = None):
         '''
         input:
             - new_map: MapObject
@@ -61,13 +61,17 @@ class PxClassifier():
         #entropy, entropy_name = px_features.entr(new_map.bw_img, img_name = new_map.name)
 
         #glcm, glcm_name = px_features.GLCM(new_map.bw_img, 50, img_name = new_map.name)
+        if params == None:
+            params = self.params
         rgb, rgb_name = px_features.normalized(new_map.getMapData(), img_name = new_map.name)
         ave_rgb, ave_rgb_name = px_features.blurred(new_map.img, img_name = new_map.name)
         edges, edges_name = px_features.edge_density(new_map.bw_img, params['edge_k'], img_name = new_map.name, amp = 1)
         hog, hog_name = px_features.hog(new_map.bw_img, params['hog_k'], img_name = new_map.name, bins = params['nbins'])
+        max_d, max_d_names = px_features.bright_max_diff(new_map.img, params['edge_k'], img_name = new_map.name)
         v_print('Concatenating', self.verbose)
-        data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
-        names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
+        print max_d.shape, ave_rgb.shape
+        data = np.concatenate((rgb, ave_rgb, edges, max_d, hog), axis = 1)
+        names = np.concatenate((rgb_name, ave_rgb_name, edges_name, max_d_names, hog_name))
         v_print('Done Concatenating', self.verbose)
         return data, names
 
@@ -82,12 +86,14 @@ class PxClassifier():
         v_print('done generating visuals', self.verbose)
 
 
-    def fit(self, map_train):
+    def fit(self, map_train, label_name = None):
+        if label_name == None:
+            label_name = self.params['mask_train']
         v_print('Generating Features', self.verbose)
         X_train, feat_names = self.gen_features(map_train, self.params)
         v_print('Done generating Features', self.verbose)
         self.feat_names = feat_names
-        y_train =  map_train.getLabels(self.params['mask_train'])
+        y_train =  map_train.getLabels(label_name)
         n_train = y_train.shape[0]
         train = self.sample(y_train, int(n_train*self.params['frac_train']), self.params['EVEN'])
         v_print("Start Modelling", self.verbose)
@@ -147,7 +153,9 @@ if __name__ == "__main__":
     model = PxClassifier(85,-1)
     probs_noise = model.predict_proba(map_test, label_name = 'jared_with_buildings')
     print analyze_results.average_class_prob(map_test, map_test.getLabels('damage'), probs_noise, model.test_name)
-    #model.testing_suite(map_test, probs)
+    #model.feature_importance()
+    #model.testing_suite(map_test, probs_noise)
+    analyze_results.ROC(map_test, map_test.getLabels('damage'), probs_noise, model.test_name, save = True)
     other_labels = map_test.getLabels('damage')
 
 
@@ -156,7 +164,10 @@ if __name__ == "__main__":
     print 'done setting up'
     model = PxClassifier(85,-1)
     probs_jared = model.predict_proba(map_test, label_name = 'Jared')
+    #model.testing_suite(map_test, probs_jared)
+    #model.feature_importance()
     print analyze_results.average_class_prob(map_test, other_labels, probs_jared, model.test_name)
+    analyze_results.ROC(map_test, map_test.getLabels('damage'), probs_jared, model.test_name, save = True)
 
     print probs_jared.shape
     dims = (map_test.rows, map_test.cols)

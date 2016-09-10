@@ -90,6 +90,7 @@ def pca(X = Math.array([]), no_dims = 50):
 	X = X - Math.tile(Math.mean(X, 0), (n, 1));
 	(l, M) = Math.linalg.eig(Math.dot(X.T, X));
 	Y = Math.dot(X, M[:,0:no_dims]);
+	print 'done with pca'
 	return Y;
 
 
@@ -106,7 +107,8 @@ def tsne(X = Math.array([]), no_dims = 2, initial_dims = 50, perplexity = 30.0):
 		return -1;
 
 	# Initialize variables
-	X = pca(X, initial_dims).real;
+	X = X.real#pca(X, initial_dims).real;
+	print X.shape
 	(n, d) = X.shape;
 	max_iter = 1000;
 	initial_momentum = 0.5;
