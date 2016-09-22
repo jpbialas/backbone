@@ -20,20 +20,26 @@ class ObjectClassifier():
             "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : True
+            "EVEN" : 1
         }
 
     def sample(self, y, EVEN, n_samples = -1):
-        if EVEN:
+        if EVEN>0:
             zeros = np.where(y==0)[0]
             ones = np.where(y==1)[0]
             n0,n1 = zeros.shape[0], ones.shape[0]
-            if n_samples == -1:
-                zero_samples = np.random.choice(zeros, min(n0, n1))
-                one_samples = np.random.choice(ones, min(n0, n1))
+            if EVEN == 2:
+                replace = True
+                n = max(n0, n1)
             else:
-                zero_samples = np.random.choice(zeros, n_samples//2)
-                one_samples = np.random.choice(ones, n_samples//2)
+                replace = False
+                n = min(n0, n1)
+            if n_samples == -1:
+                zero_samples = np.random.choice(zeros, n, replace = replace)
+                one_samples = np.random.choice(ones, n, replace = replace)
+            else:
+                zero_samples = np.random.choice(zeros, n_samples//2, replace = replace)
+                one_samples = np.random.choice(ones, n_samples//2, replace = replace)
             return np.concatenate((zero_samples, one_samples))
         else:
             return np.arange(y.shape[0])

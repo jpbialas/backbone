@@ -12,11 +12,11 @@ from convenience_tools import *
 
 class PxClassifier():
 
-    def __init__(self, n_estimators, n_jobs, verbose = 1):
+    def __init__(self, n_estimators, n_jobs, n_segs = 265824, verbose = 1):
         self.verbose = verbose
         #self.model = RandomForestClassifier(n_estimators, n_jobs, verbose = verbose)
         self.params = {
-            'frac_train': 0.01,
+            'n_train': n_segs,#19745,  #1% 265824
             'frac_test' : 1,
             'mask_train' : 'damage',
             'mask_test' : 'damage',
@@ -37,6 +37,7 @@ class PxClassifier():
             - Returns random list of indices from labels such that nsamples/2 of the indices have value 1 and 
                 nsamples/2 indices have value 0
         '''
+        print nsamples
         if EVEN:
             n = labels.shape[0]
             zeros = np.where(labels == 0)[0]
@@ -47,7 +48,7 @@ class PxClassifier():
             one_samples = np.random.choice(ones, nsamples/2)
             final_set = np.concatenate((zero_samples, one_samples))
         else:
-            final_set = np.random.random_integers(0,y_train.shape[0]-1, int(n_train*params['frac_train']))
+            final_set = np.random.random_integers(0,y_train.shape[0]-1, int(self.params['n_train']))
         return final_set
 
 
@@ -86,38 +87,46 @@ class PxClassifier():
         v_print('done generating visuals', self.verbose)
 
 
-    def fit(self, map_train, label_name = None):
-        if label_name == None:
+    def fit(self, map_train, label_name = None, custom_data = None):
+        if label_name is None:
             label_name = self.params['mask_train']
-        v_print('Generating Features', self.verbose)
-        X_train, feat_names = self.gen_features(map_train, self.params)
-        v_print('Done generating Features', self.verbose)
-        self.feat_names = feat_names
+        if custom_data is None:
+            v_print('Generating Features', self.verbose)
+            self.feat_names = feat_names
+            X_train, feat_names = self.gen_features(map_train, self.params)
+            v_print('Done generating Features', self.verbose)
+        else:
+            X_train = custom_data
         y_train =  map_train.getLabels(label_name)
         n_train = y_train.shape[0]
-        train = self.sample(y_train, int(n_train*self.params['frac_train']), self.params['EVEN'])
+        train = self.sample(y_train, int(self.params['n_train']), self.params['EVEN'])
         v_print("Start Modelling", self.verbose)
         self.model = RandomForestClassifier(n_estimators=85, n_jobs = -1, verbose = self.verbose)
         self.model.fit(X_train[train], y_train[train])
         v_print("Done Modelling", self.verbose)
 
 
-    def predict_proba(self, map_test, label_name = "Jared"):
+    def predict_proba(self, map_test, label_name = "Jared", load = True, custom_data = None):
         v_print('Starting Predction', self.verbose)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Px", label_name, self.params['EVEN'], img_num, False)
         p = 'PXpredictions/'+self.test_name+'_probs.npy'
-        if os.path.exists(p):
+        if os.path.exists(p) and load:
             prediction_prob = np.load(p)
         else:
-            v_print('Starting test gen', self.verbose)
-            X_test, feat_names = self.gen_features(map_test, self.params)
-            v_print('Done test gen', self.verbose)
-            y_test = map_test.getLabels(self.params['mask_test'])
-            n_test = y_test.shape[0]
-            ground_truth = y_test
+            if label_name is None:
+                label_name = self.params['mask_train']
+            if custom_data is None:
+                v_print('Starting test gen', self.verbose)
+                X_test, feat_names = self.gen_features(map_test, self.params)
+                v_print('Done test gen', self.verbose)
+            else:
+                X_test = custom_data
+            #y_test = map_test.getLabels(label_name)
+            #n_test = y_test.shape[0]
+            #ground_truth = y_test
             prediction_prob = self.model.predict_proba(X_test)[:,1]
-            if self.params['frac_test'] == 1:
+            if self.params['frac_test'] == 1 and load:
                 np.save('PXpredictions/'+self.test_name+'_probs.npy', prediction_prob)
         v_print("Done with Prediction", self.verbose)
         return prediction_prob
