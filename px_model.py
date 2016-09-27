@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from sklearn.ensemble import RandomForestClassifier
 import px_features
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import analyze_results
 import os
 import progressbar
@@ -100,7 +100,7 @@ class PxClassifier():
         n_train = y_train.shape[0]
         train = self.sample(y_train, int(self.params['n_train']), self.params['EVEN'])
         v_print("Start Modelling", self.verbose)
-        self.model = RandomForestClassifier(n_estimators=85, n_jobs = 16, verbose = self.verbose)
+        self.model = RandomForestClassifier(n_estimators=85, n_jobs = -1, verbose = self.verbose)
         self.model.fit(X_train[train], y_train[train])
         v_print("Done Modelling", self.verbose)
 
@@ -157,7 +157,7 @@ class PxClassifier():
 if __name__ == "__main__":
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
-    model = PxClassifier(85,16)
+    model = PxClassifier(85,-1)
     probs_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
     np.savetxt('px_test.csv', probs_jared, delimiter = ',')
 

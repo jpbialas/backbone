@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import cv2
 import skimage.feature as feat
 from skimage.filters.rank import windowed_histogram
