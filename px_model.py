@@ -157,7 +157,7 @@ class PxClassifier():
 if __name__ == "__main__":
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
-    model = PxClassifier(85,-1)
+    model = PxClassifier(85,16)
     probs_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
     np.savetxt('px_test.csv', probs_jared, delimiter = ',')
 
