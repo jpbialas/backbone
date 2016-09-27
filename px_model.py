@@ -100,7 +100,7 @@ class PxClassifier():
         n_train = y_train.shape[0]
         train = self.sample(y_train, int(self.params['n_train']), self.params['EVEN'])
         v_print("Start Modelling", self.verbose)
-        self.model = RandomForestClassifier(n_estimators=85, n_jobs = -1, verbose = self.verbose)
+        self.model = RandomForestClassifier(n_estimators=85, n_jobs = 16, verbose = self.verbose)
         self.model.fit(X_train[train], y_train[train])
         v_print("Done Modelling", self.verbose)
 
