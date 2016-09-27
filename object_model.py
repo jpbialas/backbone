@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
+from sklearn.metrics import roc_curve
 from convenience_tools import *
 
 
@@ -100,7 +101,8 @@ if __name__ == '__main__':
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     #ob_clf1.testing_suite(jared_test, pred_jared)
-    print analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
+    print(roc_curve(jared_test.getLabels('damage'), pred_jared()))
+    #print analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
 
 
 
