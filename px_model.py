@@ -91,8 +91,8 @@ class PxClassifier():
             label_name = self.params['mask_train']
         if custom_data is None:
             v_print('Generating Features', self.verbose)
-            self.feat_names = feat_names
             X_train, feat_names = self.gen_features(map_train, self.params)
+            self.feat_names = feat_names
             v_print('Done generating Features', self.verbose)
         else:
             X_train = custom_data
