@@ -101,14 +101,14 @@ if __name__ == '__main__':
     ob_clf2 = ObjectClassifier()
     pred_joe = ob_clf2.fit_and_predict(joe_train, joe_test, "jared_with_buildings")
     analyze_results.ROC(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name, save = False)
-    print analyze_results.average_class_prob(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name)
+    print (analyze_results.average_class_prob(joe_test, joe_test.getLabels('damage'), pred_joe, ob_clf2.test_name))
     #ob_clf2.testing_suite(joe_test, pred_joe)
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     #ob_clf1.testing_suite(jared_test, pred_jared)
     analyze_results.ROC(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
-    print analyze_results.average_class_prob(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name)
+    print (analyze_results.average_class_prob(jared_test, joe_test.getLabels('damage'), pred_jared, ob_clf1.test_name))
 
     analyze_results.compare_heatmaps(pred_jared, pred_joe)
     plt.show()

@@ -1,4 +1,5 @@
 import progressbar
+import matplotlib.pyplot as plt
 
 def v_print(myStr, verbose):
     '''
@@ -17,3 +18,9 @@ def custom_progress():
     '''
     return progressbar.ProgressBar(widgets=[' [', progressbar.Timer(), '] ',progressbar.Bar(),' (', progressbar.ETA(), ') ',])
 
+def show_img(img, title = ""):
+    fig = plt.figure()
+    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+    plt.imshow(img)
+    plt.title(title), plt.xticks([]), plt.yticks([])
+    return fig

@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import seg_features as sf
+from convenience_tools import *
 
 def main(my_map, start = 1, end = 2):
     img_num = my_map.name[-1]
@@ -69,14 +70,13 @@ def main2(my_map):
 
 def visualize_noise(my_map):
     img_num = my_map.name[-1]
-    for i in range(1,2):
-        noise_level = i/10.0
-        img_name = 'damagelabels50/Sim{}-3-{}.csv'.format(i, img_num)
-        plt.figure(img_name)
+    for i in range(5):
+        noise_level = 10*i
+        img_name = 'damagelabels50/Sim_{}-3-{}.csv'.format(noise_level, img_num)
+        #plt.figure(img_name)
         next_label = np.loadtxt(img_name, delimiter = ',')
         next_img = my_map.mask_segments_by_indx(next_label, 50, with_img = True)
-        plt.imshow(next_img)
-
+        show_img(next_img)
     img_name = 'damagelabels50/Joe-3-{}.csv'.format(img_num)
     plt.figure(img_name)
     next_label = np.loadtxt(img_name, delimiter = ',')
@@ -97,5 +97,5 @@ if __name__ == '__main__':
     #main(map_test)
     #main(map_train)
     #main2(map_test)
-    calc_percents()
-    #visualize_noise(map_test)
+    #calc_percents()
+    visualize_noise(map_test)

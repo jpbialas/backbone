@@ -70,7 +70,6 @@ class PxClassifier():
         hog, hog_name = px_features.hog(new_map.bw_img, params['hog_k'], img_name = new_map.name, bins = params['nbins'])
         max_d, max_d_names = px_features.bright_max_diff(new_map.img, params['edge_k'], img_name = new_map.name)
         v_print('Concatenating', self.verbose)
-        print max_d.shape, ave_rgb.shape
         data = np.concatenate((rgb, ave_rgb, edges, max_d, hog), axis = 1)
         names = np.concatenate((rgb_name, ave_rgb_name, edges_name, max_d_names, hog_name))
         v_print('Done Concatenating', self.verbose)
@@ -156,9 +155,15 @@ class PxClassifier():
 
 
 if __name__ == "__main__":
-    print 'setting up'
+    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
+    print ('done setting up')
+    model = PxClassifier(85,-1)
+    probs_jared = model.predict_proba(map_test, label_name = 'Jared')
+    np.save('px_test.npy', probs_jared)
+
+    '''print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "jared_with_buildings")
-    print 'done setting up'
+    print ('done setting up')
     model = PxClassifier(85,-1)
     probs_noise = model.predict_proba(map_test, label_name = 'jared_with_buildings')
     print analyze_results.average_class_prob(map_test, map_test.getLabels('damage'), probs_noise, model.test_name)
@@ -168,9 +173,9 @@ if __name__ == "__main__":
     other_labels = map_test.getLabels('damage')
 
 
-    print 'setting up'
+    print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
-    print 'done setting up'
+    print ('done setting up')
     model = PxClassifier(85,-1)
     probs_jared = model.predict_proba(map_test, label_name = 'Jared')
     #model.testing_suite(map_test, probs_jared)
@@ -181,6 +186,6 @@ if __name__ == "__main__":
     print probs_jared.shape
     dims = (map_test.rows, map_test.cols)
     analyze_results.compare_heatmaps(probs_jared.reshape(dims), probs_noise.reshape(dims))
-    plt.show()
+    plt.show()'''
 
 
