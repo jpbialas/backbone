@@ -1,5 +1,5 @@
 import progressbar
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 def v_print(myStr, verbose):
     '''

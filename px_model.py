@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from sklearn.ensemble import RandomForestClassifier
 import px_features
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import analyze_results
 import os
 import progressbar
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     print ('done setting up')
     model = PxClassifier(85,-1)
     probs_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
-    np.save('px_test.npy', probs_jared)
+    np.savetxt('px_test.csv', probs_jared, delimiter = ',')
 
     '''print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "jared_with_buildings")
