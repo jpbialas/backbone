@@ -10,6 +10,15 @@ import sklearn
 from convenience_tools import *
 
 
+def bootstrap(L, k):
+    ''' Returns k random samples of L of size |L| with replacement
+    INPUT:
+        L: (ndarray) 
+        k: (int) number of backbone iterations to run
+    '''
+    return np.random.choice(L, (k, L.shape[0]), replace = True)
+
+
 def test_progress(map_train, map_test, X_train, training_labels, test_truth, show):
     model = ObjectClassifier(verbose = 0)
     training_sample = model.sample(training_labels, EVEN = 2)
@@ -27,6 +36,37 @@ def test_progress(map_train, map_test, X_train, training_labels, test_truth, sho
     else:
         return sklearn.metrics.roc_auc_score(test_truth[test_segs], prediction.ravel())
     return AUC   
+
+
+def uncertainty(data, y, k, m, frac_test = 1.0, verbose = True):
+    '''Computes uncertainty for all unlabelled points as described in Mozafari 3.2 
+    and returnst the m indices of the most uncertain
+    NOTE: Smaller values are more certain b/c they have smaller variance
+    Input:
+        X: (ndarray) Contains all data
+        y: (ndarray) Contains labels, 1 for damage, 0 for not damaged, -1 for unlabelled
+        k: (int) number of backbone iterations to run
+        m: (int) number of new data to select for labelling
+    '''
+    U = np.where(y < 0)[0]
+    U = np.random.choice(U, frac_test*U.shape[0], replace = False)
+    data_U =  np.take(data, U, axis = 0)
+    L = np.where(y >= 0)[0]
+    samples = bootstrap(L, k)
+    X_U = np.zeros(U.shape[0])
+    v_print("Staring model loop", verbose)
+    pbar = custom_progress()
+    for row in pbar(samples):
+        model = ObjectClassifier(verbose = 0)
+        training_sample = model.sample(training_labels, EVEN = 2)
+        test = training_labels[training_sample]
+        model.fit(next_map, custom_labels = training_labels[training_sample], custom_data = X[training_sample])
+        prediction = model.predict_proba_segs(next_map)
+        X_U += next_prediction
+    X_U/=k
+    uncertainties=X_U*(1-X_U)
+    return U[np.argsort(uncertainties)[-m:]]
+    
 
 def rf_uncertainty(next_map, X, training_labels, show):
     model = ObjectClassifier(verbose = 0)
