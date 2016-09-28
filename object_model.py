@@ -105,20 +105,33 @@ if __name__ == '__main__':
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    for i in range(10):
+        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
+
 
     ob_clf1 = ObjectClassifier()
     pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
+    for i in range(10):
+        pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
+    pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
 
     ob_clf1 = ObjectClassifier()
     ob_clf1.params['EVEN'] = 2
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    for i in range(10):
+        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
 
     ob_clf1 = ObjectClassifier()
     ob_clf1.params['EVEN'] = 2
     pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
+    for i in range(10):
+        pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
+    pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
     #print analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
 
