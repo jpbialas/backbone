@@ -7,7 +7,7 @@ import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
 import sklearn
-from joblib import Parallel, delaye
+from joblib import Parallel, delay
 from convenience_tools import *
 
 
