@@ -21,7 +21,7 @@ class ObjectClassifier():
             "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : 1
+            "EVEN" : 0
         }
 
     def sample(self, y, EVEN, n_samples = -1):
@@ -110,6 +110,8 @@ if __name__ == '__main__':
         pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
+    FPRs, TPRs, threshs = roc_curve(jared_test.getLabels('damage'), pred_jared.ravel())
+    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
 
 
     ob_clf1 = ObjectClassifier()
@@ -119,4 +121,6 @@ if __name__ == '__main__':
         pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
+    FPRs, TPRs, threshs = roc_curve(jared_train.getLabels('damage'), pred_jared.ravel())
+    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
 

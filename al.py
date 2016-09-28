@@ -21,7 +21,7 @@ def bootstrap(L, k):
 
 def test_progress(map_train, map_test, X_train, training_labels, test_truth, show):
     model = ObjectClassifier(verbose = 0)
-    training_sample = model.sample(training_labels, EVEN = 2)
+    training_sample = np.where(training_labels != -1)
     model.fit(map_train, custom_labels = training_labels[training_sample], custom_data = X_train[training_sample])
     prediction = model.predict_proba(map_test)
     test_segs = map_test.segmentations[50][1].ravel().astype('int')
@@ -70,7 +70,7 @@ def uncertainty(data, y, k, m, frac_test = 1.0, verbose = True):
 
 def rf_uncertainty(next_map, X, training_labels, show):
     model = ObjectClassifier(verbose = 0)
-    training_sample = model.sample(training_labels, EVEN = 2)
+    training_sample = np.where(training_labels != -1)
     test = training_labels[training_sample]
     model.fit(next_map, custom_labels = training_labels[training_sample], custom_data = X[training_sample])
     prediction = model.predict_proba_segs(next_map)
