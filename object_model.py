@@ -54,11 +54,11 @@ class ObjectClassifier():
             X = custom_data
         if custom_labels is None:
             damage_indices = np.loadtxt('damagelabels50/{}-3-{}.csv'.format(label_name, img_num), delimiter = ',', dtype = 'int')
+            y = np.zeros(X.shape[0])
+            y[damage_indices] = 1
         else:
-            damage_indices = custom_labels
+            y = custom_labels
         
-        y = np.zeros(X.shape[0])
-        y[damage_indices] = 1
         return X, y
 
     def testing_suite(self, map_test, prediction_prob, save = True):
@@ -78,14 +78,19 @@ class ObjectClassifier():
         v_print('ending fit', self.verbose)
 
     def predict_proba(self, map_test, label_name = 'Jared', custom_labels = None):
+        segment_probs = self.predict_proba_segs(map_test, label_name, custom_labels)
+        px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
+        v_print('ending predict', self.verbose)
+        return px_probs
+
+    def predict_proba_segs(self, map_test, label_name = 'Jared', custom_labels = None):
         v_print('starting predict', self.verbose)
         X, y = self._get_X_y(map_test, label_name, custom_labels)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, self.params['new_feats'])
         segment_probs = self.model.predict_proba(X)[:,1]
-        px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
         v_print('ending predict', self.verbose)
-        return px_probs
+        return segment_probs
     
     def predict(self, map_test, label_name = "Jared", thresh = .5):
         return self.predict_proba(map_test, label_name)>thresh

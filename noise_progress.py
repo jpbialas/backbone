@@ -133,6 +133,7 @@ def main_dilate():
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
 
     test_segs = map_2.segmentations[50][1].ravel().astype('int')
+    train_segs = map_3.segmentations[50][1].ravel().astype('int')
     damage_ground = indcs2bools(test_damage, test_segs)
     building_ground = indcs2bools(test_buildings, test_segs)
     damage_AUCs = []
@@ -142,17 +143,17 @@ def main_dilate():
     damage_perecents = []
     building_percents = []
     model = ObjectClassifier(verbose = 0)
-    X, _ = model._get_X_y(map_3, "Jared", custom_labels = real_damage)
+    X, _ = model._get_X_y(map_3, "Jared", custom_labels = indcs2bools(real_damage, train_segs))
     for i in range(50):
         print 'Running noise level {} noise segs'.format(i/10.0)
         new_training = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i)).astype('int')
         tic=timeit.default_timer()
         model = ObjectClassifier()
-        model.fit(map_3, custom_labels = new_training)
+        model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs))
         prediction = model.predict_proba(map_2)
         for j in range(k-1):
             model = ObjectClassifier(verbose = 0)
-            model.fit(map_3, custom_labels = new_training, custom_data = X)
+            model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs), custom_data = X)
             prediction += model.predict_proba(map_2)
         prediction /= k
 
@@ -214,7 +215,8 @@ def main_segs():
     damage_perecents = np.zeros(100)
     building_percents = np.zeros(100)
     model = ObjectClassifier(verbose = 0)
-    X, _ = model._get_X_y(map_3, "Jared", custom_labels = real_damage)
+    train_segs = map_3.segmentations[50][1].ravel().astype('int')
+    X, _ = model._get_X_y(map_3, "Jared", custom_labels = indcs2bools(real_damage, train_segs))
 
     for i in range(100):
         i = order[i]
@@ -224,12 +226,12 @@ def main_segs():
         
 
         model = ObjectClassifier()
-        model.fit(map_3, custom_labels = new_training)
+        model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs))
         prediction = model.predict_proba(map_2)
         for j in range(k-1):
             print ('here')
             model = ObjectClassifier(verbose = 0)
-            model.fit(map_3, custom_labels = new_training, custom_data = X)
+            model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs), custom_data = X)
             prediction += model.predict_proba(map_2)
         prediction /= k
 
