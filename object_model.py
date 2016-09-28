@@ -7,7 +7,6 @@ import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
 import sklearn
-from joblib import Parallel, delayed
 from convenience_tools import *
 
 
@@ -74,7 +73,7 @@ class ObjectClassifier():
         v_print('starting fit', self.verbose)
         X, y = self._get_X_y(map_train, label_name, custom_labels, custom_data)
         samples = self.sample(y, self.params['EVEN']) 
-        self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
+        self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose, class_weight = "balanced")
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
 
@@ -105,38 +104,19 @@ if __name__ == '__main__':
     
 
     ob_clf1 = ObjectClassifier()
-    '''pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
-    for i in range(10):
-        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
-    pred_jared/=11'''
-    pred_jared = Parallel(n_jobs = -1)(delayed(ob_clf1.fit_and_predict)(jared_train, jared_test, 'Jared'))
-    print pred_jared
-    #print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
-
-
-    ob_clf1 = ObjectClassifier()
-    pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
-    for i in range(10):
-        pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
-    pred_jared/=11
-    print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
-
-    ob_clf1 = ObjectClassifier()
-    ob_clf1.params['EVEN'] = 2
+    ob_clf1.params['EVEN'] = 0
     pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     for i in range(10):
         pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
 
+
     ob_clf1 = ObjectClassifier()
-    ob_clf1.params['EVEN'] = 2
+    ob_clf1.params['EVEN'] = 0
     pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
     for i in range(10):
         pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
-    #print analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared, ob_clf1.test_name, save = False)
-
-
 
