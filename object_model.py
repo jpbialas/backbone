@@ -110,7 +110,7 @@ if __name__ == '__main__':
         pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
-    FPRs, TPRs, threshs = roc_curve(jared_test.getLabels('damage'), pred_jared.ravel())
+    FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_test.getLabels('damage'), pred_jared.ravel())
     print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
 
 
@@ -121,6 +121,6 @@ if __name__ == '__main__':
         pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
-    FPRs, TPRs, threshs = roc_curve(jared_train.getLabels('damage'), pred_jared.ravel())
+    FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_train.getLabels('damage'), pred_jared.ravel())
     print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
 
