@@ -18,7 +18,7 @@ class ObjectClassifier():
         self.params = {
             "n_trees" : 85, 
             "base_seg" : 50, 
-            "segs" : [400], 
+            "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
             "EVEN" : 2
@@ -103,7 +103,7 @@ class ObjectClassifier():
         return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([400], 50, label_name = "all_rooftops")
+    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "all_rooftops")
     
 
     ob_clf1 = ObjectClassifier()

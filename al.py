@@ -118,7 +118,7 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main(map_train, map_test, start_n=100, step_n=100, n_updates = 100, verbose = 1, show = False):
+def main(map_train, map_test, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = False):
     '''
     Runs active learning on train, and tests on the other map. Starts with start_n labels, and increments by step_n size batches.
     If method is UNCERT, picks new indices with bootstrap Uncertainty, with a bootstrap size of boot_n.
