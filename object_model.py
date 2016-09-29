@@ -18,10 +18,10 @@ class ObjectClassifier():
         self.params = {
             "n_trees" : 85, 
             "base_seg" : 50, 
-            "segs" : [100], 
+            "segs" : [400], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : 0
+            "EVEN" : 2
         }
 
     def sample(self, y, EVEN, n_samples = -1):
@@ -61,6 +61,9 @@ class ObjectClassifier():
         
         return X, y
 
+    def reset_model(self):
+        self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose)
+
     def testing_suite(self, map_test, prediction_prob, save = True):
         v_print('generating visuals', self.verbose)
         heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = save)
@@ -73,7 +76,7 @@ class ObjectClassifier():
         v_print('starting fit', self.verbose)
         X, y = self._get_X_y(map_train, label_name, custom_labels, custom_data)
         samples = self.sample(y, self.params['EVEN']) 
-        self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose, class_weight = "balanced")
+        self.model= RandomForestClassifier(n_estimators=self.params['n_trees'], n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
 
@@ -100,20 +103,21 @@ class ObjectClassifier():
         return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
+    jared_test, jared_train = map_overlay.basic_setup([400], 50, label_name = "all_rooftops")
     
 
     ob_clf1 = ObjectClassifier()
-    ob_clf1.params['EVEN'] = 0
-    pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
-    for i in range(10):
-        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
+    pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "all_rooftops")
+    for i in range(0):
+        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "all_rooftops")
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
     FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_test.getLabels('damage'), pred_jared.ravel())
     print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
+    ob_clf1.testing_suite(jared_test, pred_jared.ravel(), save = False)
+    plt.show()
 
-
+    '''
     ob_clf1 = ObjectClassifier()
     ob_clf1.params['EVEN'] = 0
     pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
@@ -122,5 +126,5 @@ if __name__ == '__main__':
     pred_jared/=11
     print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
     FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_train.getLabels('damage'), pred_jared.ravel())
-    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
+    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])'''
 

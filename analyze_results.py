@@ -157,7 +157,7 @@ def probability_heat_map(map_test, full_predict, name, save = False):
     fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     ground_truth = map_test.getLabels('damage')
     plt.contour(ground_truth.reshape(map_test.rows, map_test.cols), colors = 'green')
-    plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.imshow(full_predict.reshape(map_test.rows, map_test.cols), cmap = 'seismic')
     plt.title('Damage Prediction'), plt.xticks([]), plt.yticks([])
     if save:
         fig.savefig('Compare Methods/{}_heatmap.png'.format(name), format='png', dpi = 2400)
