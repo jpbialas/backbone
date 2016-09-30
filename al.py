@@ -49,7 +49,6 @@ def uncertain_order(importance, valid_indices, decreasing = True):
     return order
 
 def LCB_helper(boot_sample, training_labels, X, i):
-    print i
     obj_model = ObjectClassifier(verbose = 0)
     obj_model.reset_model()
     model = obj_model.model
@@ -142,7 +141,8 @@ def main(map_train, map_test, start_n=100, step_n=100, n_updates = 200, verbose 
     rocs.append(next_roc)
     pbar = custom_progress()
     for i in pbar(range(n_updates)):
-        most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
+        #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
+        most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
         new_training = most_uncertain[:step_n]
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = train_truth[new_training]
