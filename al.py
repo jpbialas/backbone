@@ -117,11 +117,15 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main(map_train, map_test, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = False):
+def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = False):
     '''
     Runs active learning on train, and tests on the other map. Starts with start_n labels, and increments by step_n size batches.
     If method is UNCERT, picks new indices with bootstrap Uncertainty, with a bootstrap size of boot_n.
     '''
+    print i
+    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
+    map_train = map_3
+    map_test = map_2
     
     print ('done setting up')
     segs_train = map_train.segmentations[50][1].ravel().astype('int')
@@ -141,19 +145,19 @@ def main(map_train, map_test, start_n=100, step_n=100, n_updates = 200, verbose 
     rocs.append(next_roc)
     pbar = custom_progress()
     for i in pbar(range(n_updates)):
-        #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
-        most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
+        most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
+        #most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
         new_training = most_uncertain[:step_n]
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = train_truth[new_training]
         #Test predictive performance on other map
         next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
         rocs.append(next_roc)
-        np.savetxt('al/rocs.csv', rocs, delimiter = ',')
-
+        np.savetxt('al/rocs_{}.csv'.format(run_num), rocs, delimiter = ',')
+    return np.array(rocs)
 
 
 
 if __name__ == '__main__':
-    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    main(map_3, map_2)
+    results = np.array(Parallel(n_jobs=-1)(delayed(main)(i) for i in range(10)))
+    np.savetxt('al/all_rocs.csv', results, delimiter = ',')
