@@ -156,7 +156,7 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
         #Test predictive performance on other map
         next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
         rocs.append(next_roc)
-        np.savetxt('al/rocs_lcb_{}.csv'.format(run_num), rocs, delimiter = ',')
+        np.savetxt('al/rocs_random_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
 
 
