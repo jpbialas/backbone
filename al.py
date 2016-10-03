@@ -111,9 +111,7 @@ def rf_uncertainty(next_map, X, training_labels, show):
     return uncertain_order(uncertainties, unknown_indcs, decreasing=True)
 
 def random_uncertainty(training_labels, show):
-    print np.where(training_labels == -1)[0]
-    print np.random.shuffle(np.where(training_labels == -1)[0]).shape, np.random.shuffle(np.where(training_labels == -1)[0])[0]
-    return np.random.shuffle(np.where(training_labels == -1)[0])
+    return np.random.permutation(np.where(training_labels == -1)[0])
 
 def indcs2bools(indcs, segs):
     nsegs = np.max(segs)+1
