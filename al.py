@@ -153,11 +153,10 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
         #Test predictive performance on other map
         next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
         rocs.append(next_roc)
-        np.savetxt('al/rocs_{}.csv'.format(run_num), rocs, delimiter = ',')
+        np.savetxt('al/rocs_lcb_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
 
 
 
 if __name__ == '__main__':
-    results = np.array(Parallel(n_jobs=-1)(delayed(main)(i) for i in range(10)))
-    np.savetxt('al/all_rocs.csv', results, delimiter = ',')
+    Parallel(n_jobs=10)(delayed(main)(i) for i in range(10))
