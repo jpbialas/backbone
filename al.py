@@ -124,10 +124,10 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
     Runs active learning on train, and tests on the other map. Starts with start_n labels, and increments by step_n size batches.
     If method is UNCERT, picks new indices with bootstrap Uncertainty, with a bootstrap size of boot_n.
     '''
-    print i
+    print run_num
     map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    map_train = map_3
-    map_test = map_2
+    map_train = map_2
+    map_test = map_3
     
     print ('done setting up')
     segs_train = map_train.segmentations[50][1].ravel().astype('int')
@@ -156,7 +156,7 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
         #Test predictive performance on other map
         next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
         rocs.append(next_roc)
-        np.savetxt('al/rocs_lcb_{}.csv'.format(run_num), rocs, delimiter = ',')
+        np.savetxt('al_3-2_3-3/rocs_lcb_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
 
 
