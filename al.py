@@ -110,6 +110,8 @@ def rf_uncertainty(next_map, X, training_labels, show):
     # This returns only the indices whose values are -1 with most uncertain first
     return uncertain_order(uncertainties, unknown_indcs, decreasing=True)
 
+def random_uncertainty(training_labels, show):
+    return np.random.shuffle(np.where(training_labels == -1)[0])
 
 def indcs2bools(indcs, segs):
     nsegs = np.max(segs)+1
@@ -145,8 +147,9 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
     rocs.append(next_roc)
     pbar = custom_progress()
     for i in pbar(range(n_updates)):
-        most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
+        #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
         #most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
+        most_uncertain = random_uncertainty(training_labels, show)
         new_training = most_uncertain[:step_n]
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = train_truth[new_training]
