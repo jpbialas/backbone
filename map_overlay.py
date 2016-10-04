@@ -12,11 +12,8 @@ def convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5):
     segs = np.load(segs_fn).astype('int')
     my_map.newMask(shape_fn, 'damage')
     mask = my_map.masks['damage'].reshape(segs.shape)
-    print 'starting fit'
-    print mask.reshape((my_map.cols*my_map.rows, 1)).shape
-    print segs.ravel().shape
     fitted = sf.px2seg2(mask.reshape((my_map.cols*my_map.rows, 1)), segs.ravel())
-    return fitted>thresh
+    return np.where((fitted>thresh)>0)[0]
 
 
 def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
@@ -352,11 +349,4 @@ class MapOverlay:
             np.save(p, full_mask)
 
 if __name__ == '__main__':
-    for i in [2,3]:
-        shape_fn =  'lukedata/luke-3-{}-damage.shp'.format(i)
-        map_fn = 'datafromjoe/1-0003-000{}.tif'.format(i)
-        segs_fn = 'processed_segments/shapefilewithfeatures003-00{}-50.npy'.format(i)
-        result = convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5)
-        np.savetxt('damagelabels50/Luke-3-{}.csv'.format(i), result, delimiter = ',')
-        print result.shape
-        print result
+    pass

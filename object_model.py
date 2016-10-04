@@ -103,28 +103,12 @@ class ObjectClassifier():
         return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "all_rooftops")
+    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
     
-
-    ob_clf1 = ObjectClassifier()
-    pred_jared = ob_clf1.fit_and_predict(jared_train, jared_test, "all_rooftops")
+    model = ObjectClassifier()
+    pred_jared = model.fit_and_predict(jared_train, jared_test, "Jared")
     for i in range(0):
-        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "all_rooftops")
+        pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     pred_jared/=11
-    print(sklearn.metrics.roc_auc_score(jared_test.getLabels('damage'), pred_jared.ravel()))
-    FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_test.getLabels('damage'), pred_jared.ravel())
-    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])
     ob_clf1.testing_suite(jared_test, pred_jared.ravel(), save = False)
     plt.show()
-
-    '''
-    ob_clf1 = ObjectClassifier()
-    ob_clf1.params['EVEN'] = 0
-    pred_jared = ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
-    for i in range(10):
-        pred_jared += ob_clf1.fit_and_predict(jared_test, jared_train, "Jared")
-    pred_jared/=11
-    print(sklearn.metrics.roc_auc_score(jared_train.getLabels('damage'), pred_jared.ravel()))
-    FPRs, TPRs, threshs = sklearn.metrics.roc_curve(jared_train.getLabels('damage'), pred_jared.ravel())
-    print(threshs[np.argmin(FPRs**2 + (1-TPRs)**2)])'''
-
