@@ -5,6 +5,16 @@ import numpy as np
 from osgeo import gdal, osr, ogr, gdalconst #For shapefile...raster
 import os
 from convenience_tools import *
+import seg_features as sf
+
+def convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5):
+    my_map = MapOverlay(map_fn)
+    segs = np.load(segs_fn).astype('int')
+    my_map.newMask(shape_fn, 'damage')
+    mask = my_map.masks['damage'].reshape(segs.shape)
+    print 'starting fit'
+    fitted = sf.px2seg2(mask, segs)
+    return fitted>thresh
 
 
 def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
@@ -172,8 +182,18 @@ class MapOverlay:
 
         return outDataSet, targetSR
 
+    def mask_helper(self, img, mask, opacity = 0.4):
+        h,w,c = img.shape
+        adj_mask = np.logical_not(mask).reshape(h,w,1)
+        gap_image = img*adj_mask
+        red_mask = ([255,0,0]*mask.reshape(h,w,1)).astype('uint8')
+        masked_image = gap_image+red_mask
+        output = img.copy()
+        cv2.addWeighted(masked_image, opacity, output, 1.0-opacity, 0, output)
+        return output
 
-    def maskImg(self, mask_name):
+
+    def maskImg(self, mask_name, opacity = 0.4):
         '''
         INPUT: 
             - (string) Name of mask to overlay
@@ -182,12 +202,7 @@ class MapOverlay:
         '''
 
         mask = self.masks[mask_name]
-        h,w = self.rows, self.cols
-        adj_mask = np.logical_not(mask).reshape(h,w,1)
-
-        
-        overlay = self.img*adj_mask #+mask.reshape(h,w,1)*np.array([0.,0.,1.])
-        return overlay
+        return self.mask_helper(self.img, mask, opacity)
 
     def mask_segments(self, i, level, with_img = True):
         '''
@@ -195,10 +210,7 @@ class MapOverlay:
         '''
         mask = np.in1d(self.segmentations[level][1],np.where(i))
         if with_img:
-            h,w = self.rows, self.cols
-            adj_mask = np.logical_not(mask).reshape(h,w,1)
-            overlay = self.img*adj_mask
-            return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+            return self.mask_helper(self.img, mask)
         else:
             return mask
 
@@ -208,10 +220,7 @@ class MapOverlay:
         '''
         mask = np.in1d(self.segmentations[level][1],indcs)
         if with_img:
-            h,w = self.rows, self.cols
-            adj_mask = np.logical_not(mask).reshape(h,w,1)
-            overlay = self.img*adj_mask
-            return overlay#cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+            return self.mask_helper(self.img, mask)
         else:
             return mask
 
@@ -339,3 +348,13 @@ class MapOverlay:
             dataSource.Destroy()
             self.segmentations[level] = (name,full_mask)
             np.save(p, full_mask)
+
+if __name__ == '__main__':
+    for i in [2,3]:
+        shape_fn =  'lukedata/luke-3-{}-damage.shp'.format(i)
+        map_fn = 'datafromjoe/1-0003-000{}.tif'.format(i)
+        segs_fn = 'processed_segments/shapefilewithfeatures003-00{}-50.npy'.format(i)
+        result = convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5)
+        np.savetxt('damagelabels50/Luke-3-{}.csv'.format(i), result, delimiter = ',')
+        print result.shape
+        print result
