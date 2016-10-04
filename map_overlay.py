@@ -13,7 +13,9 @@ def convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5):
     my_map.newMask(shape_fn, 'damage')
     mask = my_map.masks['damage'].reshape(segs.shape)
     print 'starting fit'
-    fitted = sf.px2seg2(mask.ravel(), segs.ravel())
+    print mask.reshape((my_map.cols*my_map.rows, 1)).shape
+    print segs.ravel().shape
+    fitted = sf.px2seg2(mask.reshape((my_map.cols*my_map.rows, 1)), segs.ravel())
     return fitted>thresh
 
 
