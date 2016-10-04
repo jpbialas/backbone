@@ -107,7 +107,8 @@ if __name__ == '__main__':
     
     model = ObjectClassifier()
     pred_jared = model.fit_and_predict(jared_train, jared_test, "Jared")
-    for i in range(0):
+    pbar = custom_progress()
+    for i in pbar(range(0)):
         pred_jared += ob_clf1.fit_and_predict(jared_train, jared_test, "Jared")
     pred_jared/=11
     ob_clf1.testing_suite(jared_test, pred_jared.ravel(), save = False)
