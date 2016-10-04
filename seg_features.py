@@ -7,6 +7,21 @@ import os
 
 
 
+def px2segMulti(values, indcs):
+    '''
+        See px2seg
+        This implementation is faster for larger numbers of segments. The original is
+        better for smaller numbers of segments because each segment is computed by numpy
+    '''
+    pbar = custom_progress()
+    n_segs = int(np.max(indcs))+1
+    counts = np.bincount(indcs.ravel().astype('int'))
+    counts = counts.reshape(counts.shape[0], 1)
+    data = np.zeros((n_segs, values.shape[1]), dtype = 'float')
+    for i in pbar(range(values.shape[0])):
+        data[indcs[i]] += values[i]
+    return data/counts
+
 def px2seg2(values, indcs):
     '''
         See px2seg
