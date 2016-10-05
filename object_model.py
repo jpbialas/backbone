@@ -21,7 +21,7 @@ class ObjectClassifier():
             "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : 2
+            "EVEN" : 1
         }
 
     def sample(self, y, EVEN, n_samples = -1):
@@ -104,12 +104,27 @@ class ObjectClassifier():
 
 if __name__ == '__main__':
     jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    
+ 
+    name = 'trained on luke tested on jared'
     model = ObjectClassifier()
-    pred_jared = model.fit_and_predict(jared_train, jared_test, "Jared")
-    pbar = custom_progress()
-    for i in pbar(range(10)):
-        pred_jared += model.fit_and_predict(jared_train, jared_test, "Jared")
-    pred_jared/=11
-    model.testing_suite(jared_test, pred_jared.ravel(), save = False)
+    model.fit(jared_train, "Joe")
+    pred_jared = model.predict_proba(jared_test, "Jared")
+    model.fit(jared_train, "Luke")
+    pred_joe = model.predict_proba(jared_test, "Jared")
+    plt.figure()
+    plt.imshow(pred_jared-pred_joe, cmap = 'seismic', norm = plt.Normalize(-1,1))
+    plt.xticks([]), plt.yticks([])
+
+    plt.figure()
+    plt.imshow(pred_jared, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.xticks([]), plt.yticks([])
+    plt.figure()
+    plt.imshow(pred_joe, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.xticks([]), plt.yticks([])
+    '''pbar = custom_progress()
+    for i in pbar(range(0)):
+        model.fit(jared_train, "Luke")
+        pred_jared += model.predict_proba(jared_test, "Jared")
+    pred_jared/=11'''
+    #analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared.ravel(), name = name, save = False)
     plt.show()

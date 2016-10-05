@@ -155,37 +155,37 @@ class PxClassifier():
 
 
 if __name__ == "__main__":
-    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
+    '''map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
     model = PxClassifier(85,-1)
     probs_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
     np.savetxt('px_test.csv', probs_jared, delimiter = ',')
-
-    '''print ('setting up')
-    map_test, map_train = map_overlay.basic_setup([], label_name = "jared_with_buildings")
+    '''
+    print ('setting up')
+    map_test, map_train = map_overlay.basic_setup([], label_name = "Luke")
     print ('done setting up')
     model = PxClassifier(85,-1)
-    probs_noise = model.predict_proba(map_test, label_name = 'jared_with_buildings')
-    print analyze_results.average_class_prob(map_test, map_test.getLabels('damage'), probs_noise, model.test_name)
-    #model.feature_importance()
-    #model.testing_suite(map_test, probs_noise)
-    analyze_results.ROC(map_test, map_test.getLabels('damage'), probs_noise, model.test_name, save = True)
-    other_labels = map_test.getLabels('damage')
-
+    pred_luke = model.predict_proba(map_test, label_name = 'Luke')
+    np.savetxt('pred_luke.csv', delimiter = ',')
 
     print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
     model = PxClassifier(85,-1)
-    probs_jared = model.predict_proba(map_test, label_name = 'Jared')
-    #model.testing_suite(map_test, probs_jared)
-    #model.feature_importance()
-    print analyze_results.average_class_prob(map_test, other_labels, probs_jared, model.test_name)
-    analyze_results.ROC(map_test, map_test.getLabels('damage'), probs_jared, model.test_name, save = True)
+    pred_jared = model.predict_proba(map_test, label_name = 'Jared')
+    np.savetxt('pred_jared.csv', delimiter = ',')
+    '''
+    plt.figure()
+    plt.imshow(pred_jared-pred_luke, cmap = 'seismic', norm = plt.Normalize(-1,1))
+    plt.xticks([]), plt.yticks([])
 
-    print probs_jared.shape
-    dims = (map_test.rows, map_test.cols)
-    analyze_results.compare_heatmaps(probs_jared.reshape(dims), probs_noise.reshape(dims))
-    plt.show()'''
+    plt.figure()
+    plt.imshow(pred_jared, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.xticks([]), plt.yticks([])
+    plt.figure()
+    plt.imshow(pred_luke, cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.xticks([]), plt.yticks([])
 
+    plt.show()
+    '''
 
