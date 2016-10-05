@@ -165,14 +165,14 @@ if __name__ == "__main__":
     map_test, map_train = map_overlay.basic_setup([], label_name = "Luke")
     print ('done setting up')
     model = PxClassifier(85,-1)
-    pred_luke = model.predict_proba(map_test, label_name = 'Luke')
+    pred_luke = model.fit_and_predict(map_train, map_test, label_name = 'Luke')
     np.savetxt('pred_luke.csv', delimiter = ',')
 
     print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
     model = PxClassifier(85,-1)
-    pred_jared = model.predict_proba(map_test, label_name = 'Jared')
+    pred_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
     np.savetxt('pred_jared.csv', delimiter = ',')
     '''
     plt.figure()
