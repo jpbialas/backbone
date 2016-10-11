@@ -2,6 +2,8 @@
 #PBS -q shortq
 #PBS -l select=1:ncpus=4:mpiprocs=4
 #PBS -l walltime=1:00:00
+#PBS -m abe 
+#PBS -M jaredsfrank@gmail.com 
 
 # NOTE
 # '#PBS' directives must immediately follow your shell initialization line '#!/bin/<shell>'
@@ -17,7 +19,7 @@
 # When 'qsub' is run, PBS sets $PBS_O_WORKDIR to the directory where qsub is run.
 # Change this environment variable if desired
 #
-export PBS_O_WORKDIR=/home/jsfrank/backbone
+#export PBS_O_WORKDIR=/home/jsfrank/backbone
 
 # Set your executable directory (optional)
 #
