@@ -21,7 +21,7 @@ class ObjectClassifier():
             "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : 1
+            "EVEN" : 2
         }
 
     def sample(self, y, EVEN, n_samples = -1):
@@ -107,12 +107,13 @@ if __name__ == '__main__':
  
     name = 'trained on luke tested on jared'
     model = ObjectClassifier()
-    model.fit(jared_train, "Joe")
+    model.fit(jared_train, "Jared")
     pred_jared = model.predict_proba(jared_test, "Jared")
-    model.fit(jared_train, "Luke")
+    np.savetxt('test_saving.csv', pred_jared, delimiter = ',')
+    '''model.fit(jared_train, "Joe")
     pred_joe = model.predict_proba(jared_test, "Jared")
     plt.figure()
-    plt.imshow(pred_jared-pred_joe, cmap = 'seismic', norm = plt.Normalize(-1,1))
+    plt.imshow(pred_joe-pred_jared, cmap = 'seismic', norm = plt.Normalize(-1,1))
     plt.xticks([]), plt.yticks([])
 
     plt.figure()
@@ -121,10 +122,10 @@ if __name__ == '__main__':
     plt.figure()
     plt.imshow(pred_joe, cmap = 'seismic', norm = plt.Normalize(0,1))
     plt.xticks([]), plt.yticks([])
-    '''pbar = custom_progress()
+    pbar = custom_progress()
     for i in pbar(range(0)):
         model.fit(jared_train, "Luke")
         pred_jared += model.predict_proba(jared_test, "Jared")
-    pred_jared/=11'''
+    pred_jared/=11
     #analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared.ravel(), name = name, save = False)
-    plt.show()
+    plt.show()'''

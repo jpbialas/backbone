@@ -85,8 +85,9 @@ def xAxis():
         noise_count = np.sum(indcs2bools(noise, segs))
         px_sim_axis.append(1-damage_count/noise_count)
         seg_sim_axis.append(1-real_damage.shape[0]/float(noise.shape[0]))
-    print seg_sim_axis
-    print seg_sim_axis[0], seg_sim_axis[10], seg_sim_axis[20], seg_sim_axis[30], seg_sim_axis[40], seg_sim_axis[49]
+    #print seg_sim_axis
+    #print seg_sim_axis[0], seg_sim_axis[10], seg_sim_axis[20], seg_sim_axis[30], seg_sim_axis[40], seg_sim_axis[49]
+    print px_sim_axis
     return seg_axis, px_axis, np.array(seg_sim_axis), np.array(px_sim_axis)
 
 

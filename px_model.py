@@ -166,15 +166,15 @@ if __name__ == "__main__":
     print ('done setting up')
     model = PxClassifier(85,-1)
     pred_luke = model.fit_and_predict(map_train, map_test, label_name = 'Luke').reshape(map_test.img.shape[:2])
-    np.savetxt('pred_luke.csv', (pred_luke*1000).astype('int'), delimiter = ',')
+    #np.savetxt('pred_luke.csv', pred_luke, delimiter = ',')
 
     print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
     model = PxClassifier(85,-1)
     pred_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared').reshape(map_test.img.shape[:2])
-    np.savetxt('pred_jared.csv', (pred_luke*1000)*astype('int'), delimiter = ',')
-    ''''
+    #np.savetxt('pred_jared.csv', pred_luke, delimiter = ',')
+    
     plt.figure()
     plt.imshow(pred_jared-pred_luke, cmap = 'seismic', norm = plt.Normalize(-1,1))
     plt.xticks([]), plt.yticks([])
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     plt.xticks([]), plt.yticks([])
     plt.figure()
     plt.imshow(pred_luke, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])'''
+    plt.xticks([]), plt.yticks([])
 
     plt.show()
     
