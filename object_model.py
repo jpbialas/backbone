@@ -115,7 +115,6 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
     pred = model.predict_proba(map_3, "Jared")
     #np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
     for i in threshs_3:
-        print '\t testing at thresh i'
         print sklearn.metrics.roc_auc_score(truth_3.ravel()>i, pred.ravel())
 
 if __name__ == '__main__':
@@ -123,6 +122,8 @@ if __name__ == '__main__':
     labels_3 = crowdsource.prob_labels(3)
     threshs_2 = np.unique(labels_2)[:-1]
     threshs_3 = np.unique(labels_3)[:-1]
+    print 'trianing threshs', threshs_2
+    print 'testing threshs', threshs_3
 
     Parallel(n_jobs=-1)(delayed(main)(labels_2,labels_3,threshs_2,threshs_3,thresh) for thresh in threshs_2)
 

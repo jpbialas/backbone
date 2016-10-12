@@ -54,7 +54,8 @@ def load_csv(fn):
         return mydict
 
 if __name__ == '__main__':
-    print np.unique(prob_labels(2))
+    show_images(2)
+    show_images(3)
     print np.unique(prob_labels(3))
     plt.show()
 
