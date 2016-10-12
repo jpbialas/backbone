@@ -9,6 +9,7 @@ import analyze_results
 import crowdsource
 import sklearn
 from convenience_tools import *
+from sklearn.externals.joblib import Parallel, delayed
 
 
 
@@ -123,6 +124,6 @@ if __name__ == '__main__':
     threshs_2 = np.unique(labels_2)[:-1]
     threshs_3 = np.unique(labels_3)[:-1]
 
-    Parallel(n_jobs=-1)(delayed(main)(labels_2)(labels_3)(threshs_2)(threshs_3)(thresh) for thresh in threshs_2)
+    Parallel(n_jobs=-1)(delayed(main)(labels_2,labels_3,threshs_2,threshs_3,thresh) for thresh in threshs_2)
 
 
