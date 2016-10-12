@@ -103,81 +103,26 @@ class ObjectClassifier():
         self.fit(map_train, label_name)
         return self.predict_proba(map_test, label_name)
 
-if __name__ == '__main__':
+def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
     map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
     segs_3 = map_3.segmentations[50][1]
-    prob_2 = crowdsource.prob_labels(2)
-    prob_3 = crowdsource.prob_labels(3)
-    truth_3 = prob_3[segs_3.astype('int')]
+    truth_3 = labels_3[segs_3.astype('int')]
 
-    print 'Jared \n'
+    print 'thresh'
     model = ObjectClassifier()
-    model.fit(map_2, label_name = "Jared")
+    model.fit(map_2, custom_labels = labels_2>thresh)
     pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('jared_labelling.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.5, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.8, pred.ravel())
+    #np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
+    for i in threshs_3:
+        print '\t testing at thresh i'
+        print sklearn.metrics.roc_auc_score(truth_3.ravel()>i, pred.ravel())
 
-    print 'Probs \n'
-    model = ObjectClassifier()
-    model.fit(map_2, custom_labels = prob_2)
-    pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('prob_labelling.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.5, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.8, pred.ravel())
+if __name__ == '__main__':
+    labels_2 = crowdsource.prob_labels(2)
+    labels_3 = crowdsource.prob_labels(3)
+    threshs_2 = np.unique(labels_2)[:-1]
+    threshs_3 = np.unique(labels_3)[:-1]
 
-    print '1/3 \n'
-    model = ObjectClassifier()
-    model.fit(map_2, custom_labels = prob_2>0)
-    pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.5, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.8, pred.ravel())
+    Parallel(n_jobs=-1)(delayed(main)(labels_2)(labels_3)(threshs_2)(threshs_3)(thresh) for thresh in threshs_2)
 
 
-    print '2/3 \n'
-    model = ObjectClassifier()
-    model.fit(map_2, custom_labels = prob_2>0.5)
-    pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('two_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.5, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.8, pred.ravel())
-
-
-    print '3/3 \n'
-    model = ObjectClassifier()
-    model.fit(map_2, custom_labels = prob_2>0.8)
-    pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('three_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.5, pred.ravel())
-    print sklearn.metrics.roc_auc_score(truth_3.ravel()>0.8, pred.ravel())
-
-    '''model.fit(jared_train, "Joe")
-    pred_joe = model.predict_proba(jared_test, "Jared")
-    plt.figure()
-    plt.imshow(pred_joe-pred_jared, cmap = 'seismic', norm = plt.Normalize(-1,1))
-    plt.xticks([]), plt.yticks([])
-
-    plt.figure()
-    plt.imshow(pred_jared, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])
-    plt.figure()
-    plt.imshow(pred_joe, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])
-    pbar = custom_progress()
-    for i in pbar(range(0)):
-        model.fit(jared_train, "Luke")
-        pred_jared += model.predict_proba(jared_test, "Jared")
-    pred_jared/=11
-    #analyze_results.ROC(jared_test, jared_test.getLabels('damage'), pred_jared.ravel(), name = name, save = False)
-    plt.show()'''

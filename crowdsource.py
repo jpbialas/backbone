@@ -35,11 +35,16 @@ def prob_labels(img_num):
     return prob_labels
 
 
-def create_label_array():
+def create_label_array(add_extra = True):
     all_labels = load_csv('labels.csv')
     labels = {2: [], 3: []}
     for value in all_labels.values():
         labels[value[0]].append(map(int, value[1][1:-1].split(',')))
+    if add_extra:
+        labels[2].append(np.loadtxt('damagelabels50/Joe-3-2.csv', delimiter = ',', dtype = 'int'))
+        labels[3].append(np.loadtxt('damagelabels50/Joe-3-3.csv', delimiter = ',', dtype = 'int'))
+        labels[2].append(np.loadtxt('damagelabels50/Luke-3-2.csv', delimiter = ',', dtype = 'int'))
+        labels[3].append(np.loadtxt('damagelabels50/Luke-3-3.csv', delimiter = ',', dtype = 'int'))
     return labels
 
 def load_csv(fn):
@@ -49,7 +54,7 @@ def load_csv(fn):
         return mydict
 
 if __name__ == '__main__':
-    print prob_labels(2)
-    print prob_labels(3)
+    print np.unique(prob_labels(2))
+    print np.unique(prob_labels(3))
     plt.show()
 
