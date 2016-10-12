@@ -123,8 +123,8 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
 if __name__ == '__main__':
     labels_2 = crowdsource.prob_labels(2)
     labels_3 = crowdsource.prob_labels(3)
-    threshs_2 = np.unique(labels_3)[:-1]
-    threshs_3 = np.unique(labels_2)[:-1]
+    threshs_2 = np.unique(labels_2)[:-1]
+    threshs_3 = np.unique(labels_3)[:-1]
     print 'trianing threshs', threshs_3
     print 'testing threshs', threshs_2
 
