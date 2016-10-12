@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
+import crowdsource
 import sklearn
 from convenience_tools import *
 
@@ -103,13 +104,36 @@ class ObjectClassifier():
         return self.predict_proba(map_test, label_name)
 
 if __name__ == '__main__':
-    jared_test, jared_train = map_overlay.basic_setup([100], 50, label_name = "Jared")
+    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
  
     name = 'trained on luke tested on jared'
     model = ObjectClassifier()
-    model.fit(jared_train, "Jared")
-    pred_jared = model.predict_proba(jared_test, "Jared")
-    np.savetxt('test_saving.csv', pred_jared, delimiter = ',')
+    model.fit(map_2, custom_labels = crowdsource.prob_labels(2))
+    pred = model.predict_proba(map_3, "Jared")
+    np.savetxt('prob_labelling.csv', np.round(pred, 3), delimiter = ',')
+    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), full_predict.ravel())
+
+    name = 'trained on luke tested on jared'
+    model = ObjectClassifier()
+    model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0)
+    pred = model.predict_proba(map_3, "Jared")
+    np.savetxt('1/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), full_predict.ravel())
+
+    name = 'trained on luke tested on jared'
+    model = ObjectClassifier()
+    model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0.5)
+    pred = model.predict_proba(map_3, "Jared")
+    np.savetxt('2/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), full_predict.ravel())
+
+    name = 'trained on luke tested on jared'
+    model = ObjectClassifier()
+    model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0.8)
+    pred = model.predict_proba(map_3, "Jared")
+    np.savetxt('3/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), full_predict.ravel())
+
     '''model.fit(jared_train, "Joe")
     pred_joe = model.predict_proba(jared_test, "Jared")
     plt.figure()
