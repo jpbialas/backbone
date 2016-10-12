@@ -114,6 +114,7 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
     model.fit(map_2, custom_labels = labels_2>thresh)
     pred = model.predict_proba(map_3, "Jared")
     #np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
+    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
     for i in threshs_3:
         print sklearn.metrics.roc_auc_score(truth_3.ravel()>i, pred.ravel())
 
