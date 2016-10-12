@@ -109,7 +109,7 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
     segs_3 = map_3.segmentations[50][1]
     truth_3 = labels_3[segs_3.astype('int')]
 
-    print 'thresh'
+    print 'thresh {}'.format(thresh)
     model = ObjectClassifier()
     model.fit(map_2, custom_labels = labels_2>thresh)
     pred = model.predict_proba(map_3, "Jared")
