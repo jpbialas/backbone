@@ -108,24 +108,26 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
     map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
     segs_3 = map_3.segmentations[50][1]
     truth_3 = labels_3[segs_3.astype('int')]
+    segs_2 = map_2.segmentations[50][1]
+    truth_2 = labels_2[segs_2.astype('int')]
 
     print 'thresh {}'.format(thresh)
     model = ObjectClassifier()
-    model.fit(map_2, custom_labels = labels_2>thresh)
-    pred = model.predict_proba(map_3, "Jared")
+    model.fit(map_3, custom_labels = labels_3>thresh)
+    pred = model.predict_proba(map_2, "Jared")
     #np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
-    print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
-    for i in threshs_3:
-        print sklearn.metrics.roc_auc_score(truth_3.ravel()>i, pred.ravel())
+    print sklearn.metrics.roc_auc_score(map_2.getLabels('damage'), pred.ravel())
+    for i in threshs_2:
+        print sklearn.metrics.roc_auc_score(truth_2.ravel()>i, pred.ravel())
 
 if __name__ == '__main__':
     labels_2 = crowdsource.prob_labels(2)
     labels_3 = crowdsource.prob_labels(3)
-    threshs_2 = np.unique(labels_2)[:-1]
-    threshs_3 = np.unique(labels_3)[:-1]
-    print 'trianing threshs', threshs_2
-    print 'testing threshs', threshs_3
+    threshs_2 = np.unique(labels_3)[:-1]
+    threshs_3 = np.unique(labels_2)[:-1]
+    print 'trianing threshs', threshs_3
+    print 'testing threshs', threshs_2
 
-    Parallel(n_jobs=-1)(delayed(main)(labels_2,labels_3,threshs_2,threshs_3,thresh) for thresh in threshs_2)
+    Parallel(n_jobs=-1)(delayed(main)(labels_2,labels_3,threshs_2,threshs_3,thresh) for thresh in threshs_3)
 
 
