@@ -110,28 +110,28 @@ if __name__ == '__main__':
     model = ObjectClassifier()
     model.fit(map_2, custom_labels = crowdsource.prob_labels(2))
     pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('prob_labelling.csv', np.round(pred, 3), delimiter = ',')
+    np.savetxt('prob_labelling.csv', pred, delimiter = ',', fmt = '%1.3f')
     print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
 
     name = 'trained on luke tested on jared'
     model = ObjectClassifier()
     model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0)
     pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('1/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    np.savetxt('one_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
     print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
 
     name = 'trained on luke tested on jared'
     model = ObjectClassifier()
     model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0.5)
     pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('2/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    np.savetxt('two_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
     print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
 
     name = 'trained on luke tested on jared'
     model = ObjectClassifier()
     model.fit(map_2, custom_labels = crowdsource.prob_labels(2)>0.8)
     pred = model.predict_proba(map_3, "Jared")
-    np.savetxt('3/3_pred.csv', np.round(pred, 3), delimiter = ',')
+    np.savetxt('three_pred.csv', pred, delimiter = ',', fmt = '%1.3f')
     print sklearn.metrics.roc_auc_score(map_3.getLabels('damage'), pred.ravel())
 
     '''model.fit(jared_train, "Joe")
