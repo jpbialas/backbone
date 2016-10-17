@@ -67,7 +67,7 @@ def edge_density(img, ksize, img_name = "", amp = 1):
     else:
         new_img = img.copy()
         edges = cv2.Canny(img,50,100)
-        density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize)
+        density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize*ksize)
         n = density.ravel().shape[0]
         res = density.ravel().reshape((n,1))**amp
         np.save(p, res)

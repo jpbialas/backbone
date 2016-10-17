@@ -23,7 +23,7 @@ class ObjectClassifier():
             "segs" : [100], 
             "thresh" : .5,
             "new_feats" : True,
-            "EVEN" : 2
+            "EVEN" : 1
         }
 
     def sample(self, y, EVEN, n_samples = -1):

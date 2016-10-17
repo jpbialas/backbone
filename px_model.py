@@ -155,11 +155,20 @@ class PxClassifier():
 
 
 if __name__ == "__main__":
-    '''map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
+    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
     print ('done setting up')
     model = PxClassifier(85,-1)
-    probs_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared')
-    np.savetxt('px_test.csv', probs_jared, delimiter = ',')
+    model.fit(map_train)
+    haiti_map = MapOverlay('haiti/haiti_1002003.tif')
+    probs = model.predict_proba(haiti_map, label_name = 'haiti')
+    plt.figure()
+    plt.imshow(probs.reshape((4096, 4096)), cmap = 'seismic', norm = plt.Normalize(0,1))
+    plt.xticks([]), plt.yticks([])
+    plt.show()
+    np.savetxt('pred_haiti.csv', probs.reshape(4096, 4096), delimiter = ',')
+
+
+    
     '''
     print ('setting up')
     map_test, map_train = map_overlay.basic_setup([], label_name = "Luke")
@@ -187,5 +196,6 @@ if __name__ == "__main__":
     plt.xticks([]), plt.yticks([])
 
     plt.show()
+    '''
     
 
