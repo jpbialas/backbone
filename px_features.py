@@ -30,7 +30,7 @@ def bright_max_diff(img, ksize, img_name = ""):
         brightness = r+g+b/3
         max_diff = np.maximum(np.abs((r-g)/brightness), np.abs((r-b)/brightness), np.abs((g-b)/brightness))
         res = np.dstack((brightness.ravel(), max_diff.ravel()))[0]
-        np.save(p, res)
+        #np.save(p, res)
         return res, np.array(['Brightness', 'Max_diff'])
 
 
@@ -70,7 +70,7 @@ def edge_density(img, ksize, img_name = "", amp = 1):
         density = cv2.blur(edges, ksize = (ksize,ksize), borderType = cv2.BORDER_REFLECT)/float(ksize*ksize)
         n = density.ravel().shape[0]
         res = density.ravel().reshape((n,1))**amp
-        np.save(p, res)
+        #np.save(p, res)
         return res, np.array(['edges'])
 
 
@@ -86,7 +86,7 @@ def normalized(data, img_name = ""):
         return np.load(p), np.array(['red', 'green', 'blue'])
     else:
         res = data#(data - np.mean(data))/np.std(data)
-        np.save(p, res)
+        #np.save(p, res)
         return res, np.array(['red', 'green', 'blue'])
     
 
@@ -100,7 +100,7 @@ def entr(bw_img, img_name = "", disk_size = 5):
         plt.imshow(entr_img, cmap = 'gray')
         plt.show()
         res = entr_img.reshape((h*w,1))
-        np.save(p,res)
+        #np.save(p,res)
         return res, np.array(['entropy'])
 
 
@@ -132,7 +132,7 @@ def GLCM(img, k, img_name = ""):
                 contrast = gcp(glcm, 'contrast')
                 lset((i-k/2,j),contrast)
         
-        np.save(p, new_img)
+        #np.save(p, new_img)
     return new_img.reshape(h*w,1),np.array(['GLCM'])
 
 
@@ -153,7 +153,7 @@ def blurred(img, img_name = "", ksize = 101):
     else:
         h,w,c = img.shape
         res = cv2.GaussianBlur(img,(ksize,ksize),0).reshape(h*w,c)
-        np.save(p, res)
+        #np.save(p, res)
         return res, np.array(['ave_red','ave_green', 'ave_blue'])
 
 
@@ -174,7 +174,7 @@ def hog(bw_img, ksize, img_name = "", bins = 16):
 
         hist = windowed_histogram(angles.astype('uint8'), selem, n_bins = bins)
         res = hist.reshape(h*w, bins)
-        np.save(p, res)
+        #np.save(p, res)
         return res, np.array(names)
 
     #return np.std(hist, axis = 2).reshape(h*w,1), np.array(['hog'])
