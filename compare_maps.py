@@ -186,10 +186,14 @@ def comparepx():
     clf = PxClassifier(85,-1)
 
     haiti_data, names = clf.gen_features(Haiti)
-    haiti_sub = haiti_data[np.random.choice(haiti_data.shape[0], 100000, replace = False)]
-
+    print np.mean(haiti_data, axis = 0), np.std(haiti_data, axis = 0)
     nz1_data, names = clf.gen_features(NZ1)
+    print np.mean(nz1_data, axis = 0), np.std(nz1_data, axis = 0)
     nz2_data, names = clf.gen_features(NZ2)
+    print np.mean(nz2_data, axis = 0), np.std(nz2_data, axis = 0)
+
+
+    haiti_sub = haiti_data[np.random.choice(haiti_data.shape[0], 100000, replace = False)]
     nz1_sub = nz1_data[np.random.choice(nz1_data.shape[0], 100000, replace = False)]
     nz2_sub = nz2_data[np.random.choice(nz2_data.shape[0], 100000, replace = False)]
     print 'done subbing'

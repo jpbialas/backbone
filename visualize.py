@@ -146,7 +146,7 @@ def vis_px():
     print np.max(edge)
     print edge/0.0096
     plt.subplot(111)
-    plt.imshow(myMap.mask_helper(img, edge/0.0096>0.5))
+    plt.imshow(edge, cmap = 'gray')
     plt.xticks([]), plt.yticks([])
     
     '''
