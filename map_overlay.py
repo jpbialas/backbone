@@ -31,6 +31,14 @@ def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
     map_test.new_seg_mask(np.loadtxt('damagelabels50/{}-3-3.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
     return map_train, map_test
 
+def haiti_setup(segs = [], base_seg = 400, label_name = "Jared"):
+    haiti_map = MapOverlay('haiti/haiti_1002003.tif')
+    haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(base_seg), base_seg)
+    for seg in segs:
+        haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(seg), seg)
+    plt.imshow(haiti_map.mask_segments_by_indx(np.arange(100), 400))
+    plt.show()
+
 
 class MapOverlay:
 
@@ -299,11 +307,12 @@ class MapOverlay:
         if os.path.exists(p):
             self.segmentations[level] =  (name,np.load(p))
         else:
+            print('0')
             dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
-
+            print dataSource
             layer = dataSource.GetLayer()
             lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
-
+            print('1')
             maxx, miny = self.latlonToPx(lat_min,lon_max)
             minx, maxy = self.latlonToPx(lat_max,lon_min)
             nrows = min(maxy-miny, self.rows)
@@ -315,7 +324,7 @@ class MapOverlay:
 
             xres=(lat_max-lat_min)/float(maxx-minx)
             yres=(lon_max-lon_min)/float(maxy-miny)
-
+            print('2')
             geotransform=(lat_min,xres,0,lon_max,0, -yres)
             dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
             dst_ds.SetGeoTransform(geotransform)
@@ -337,16 +346,16 @@ class MapOverlay:
                 layer.DeleteFeature(i)
                 gdal.RasterizeLayer(dst_ds, [1], new_layer)
                 mask = dst_ds.GetRasterBand(1).ReadAsArray()
-                mask = np.pad(mask, padding, mode = 'constant', constant_values = 0)
-                mask = np.fliplr(mask)
                 mask = mask>0
                 feature.Destroy()
                 full_mask += mask*i
                 dataSource.DeleteLayer("{}_{}".format(mask_name,i))
             print("finished map segmentation reading")
+            full_mask = np.pad(full_mask, padding, mode = 'constant', constant_values = 0)
+            full_mask = np.fliplr(full_mask)
             dataSource.Destroy()
             self.segmentations[level] = (name,full_mask)
             np.save(p, full_mask)
 
 if __name__ == '__main__':
-    pass
+    haiti_setup()
