@@ -166,11 +166,11 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, thresh =.95, show = False):
-    if run_num >= 10:
-        thresh = .95
+def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, show = False):
+    if run_num >= 8:
+        u_name = 'rf'
     else:
-        thresh = .9
+        u_name = 'random'
 
     print ("Setting up {}".format(run_num))
     haiti_map = map_overlay.haiti_setup()
@@ -188,8 +188,10 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     X_test, y_test = X[test_segs], y[test_segs]
 
     training_labels = np.ones_like(y_train)*-1
-    fprs = []
-    precs = []
+    fprs90 = []
+    precs90 = []
+    fprs95 = []
+    precs95 = []
     #set initial values
     print ('setting values')
     np.random.seed()
@@ -198,23 +200,32 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     #Test initial performance
     print np.where(training_labels==1)[0], np.where(training_labels==0)[0]
     print('about to test progress for first time')
-    next_prec, next_fpr = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, thresh, show)
-    precs.append(next_prec)
-    fprs.append(next_fpr)
+    next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .90, show)
+    next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .95, show)
+    precs90.append(next_prec90)
+    fprs90.append(next_fpr90)
+    precs95.append(next_prec95)
+    fprs95.append(next_fpr95)
     pbar = custom_progress()
     for i in range(n_updates):
-        #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
-        #most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
-        most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show)#random_uncertainty(training_labels, show)
+        if u_name == 'rf':
+            most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show)
+        else:
+            most_uncertain = random_uncertainty(training_labels, show)
         new_training = most_uncertain[:step_n]
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = y_train[new_training]
         #Test predictive performance on other map
-        next_prec, next_fpr = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, thresh, show)
-        precs.append(next_prec)
-        fprs.append(next_fpr)
-        np.savetxt('al/rocs_rf_{}_prec_{}.csv'.format(thresh, run_num%10), precs, delimiter = ',')
-        np.savetxt('al/rocs_rf_{}_fpr_{}.csv'.format(thresh, run_num%10), fprs, delimiter = ',')
+        next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .90, show)
+        next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .95, show)
+        precs90.append(next_prec90)
+        fprs90.append(next_fpr90)
+        precs95.append(next_prec95)
+        fprs95.append(next_fpr95)
+        np.savetxt('al/rocs_{}_0.90_prec_{}.csv'.format(u_name, run_num%8), precs90, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.90_fpr_{}.csv'.format(u_name, run_num%8), fprs90, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.95_prec_{}.csv'.format(u_name, run_num%8), precs95, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.95_fpr_{}.csv'.format(u_name, run_num%8), fprs95, delimiter = ',')
     return np.array(rocs)
 
 
@@ -265,4 +276,4 @@ def main(run_num, start_n=50, step_n=50, n_updates = 200, verbose = 1, show = Tr
 if __name__ == '__main__':
     #main_haiti(0)
     #main(0)
-    Parallel(n_jobs=20)(delayed(main_haiti)(i) for i in range(20))
+    Parallel(n_jobs=16)(delayed(main_haiti)(i) for i in range(16))
