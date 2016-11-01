@@ -168,7 +168,7 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 1000, verbose = 1, show = True):
+def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 1000, verbose = 1, show = False):
     print ("Setting up {}".format(run_num))
     haiti_map = map_overlay.haiti_setup()
     segs = haiti_map.segmentations[20][1].ravel().astype('int')
