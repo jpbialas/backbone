@@ -258,4 +258,4 @@ def main(run_num, start_n=50, step_n=50, n_updates = 200, verbose = 1, show = Tr
 if __name__ == '__main__':
     #main_haiti(0)
     #main(0)
-    Parallel(n_jobs=20)(delayed(main_haiti)(i) for i in range(20))
+    Parallel(n_jobs=15)(delayed(main_haiti)(i) for i in range(15))
