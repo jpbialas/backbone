@@ -79,6 +79,21 @@ def color_edge(my_map, seg):
         np.save(p, data)
     return data, names
 
+def haiti_ecog_features(seg):
+    json_file = open('segmentations/haiti/{}-features.json'.format(seg))
+    json_str = json_file.read()
+    #print json_str
+
+    json_data = json.loads(json_str.replace('inf', '0'))
+    n_segs = len(json_data['features'])
+    n_feats = len(json_data['features'][0]['properties'].values())
+
+    data = np.zeros((n_segs, n_feats))
+    json_features = json_data['features']
+    names = json_features[0]['properties'].keys()
+    for i in range(n_segs):
+        data[i] = json_features[i]['properties'].values()
+    return data, names
 
 def ecognition_features(img_num, seg):
     '''
@@ -219,7 +234,7 @@ def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
             All features for each segment and context segments
             Names of those features
     '''
-    img = my_map.img
+    '''img = my_map.img
     img_num = my_map.name[-1]
     h,w,_ = img.shape
     segs = my_map.segmentations[base_seg][1].ravel().astype('int')
@@ -248,5 +263,19 @@ def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
             next_names = np.concatenate((shape_names, color_names), axis = 0)
             data = np.concatenate((next_data, data), axis = 1)
             names = np.concatenate((next_names, names), axis = 0)
+    return data, names'''
+    data, names = haiti_ecog_features(base_seg)
+    segs = my_map.segmentations[base_seg][1].ravel().astype('int')
+    n_segs = int(np.max(segs))
+    for seg in seg_levels:
+        segmentation = my_map.segmentations[seg][1].ravel().astype('int')
+        convert = np.zeros(n_segs+1).astype('int')
+        convert[segs] = segmentation
+        next_data, next_names = haiti_ecog_features(seg)
+        print data.shape, next_data.shape
+        print len(names), len(next_names)
+        data = np.concatenate((next_data[convert], data), axis = 1)
+        names = np.concatenate((next_names, names), axis = 0)
+
     return data, names
 

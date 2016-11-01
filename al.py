@@ -3,12 +3,15 @@ from px_model import PxClassifier
 import analyze_results
 import map_overlay
 from map_overlay import MapOverlay
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import timeit
 import numpy as np
 import sklearn
 from sklearn.externals.joblib import Parallel, delayed
 from convenience_tools import *
+import cv2
 
 
 def bootstrap(L, k):
@@ -37,6 +40,25 @@ def test_progress(map_train, map_test, X_train, training_labels, test_truth, sho
     else:
         return sklearn.metrics.roc_auc_score(test_truth[test_segs], prediction.ravel())
     return AUC   
+
+def test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show):
+    model = ObjectClassifier(verbose = 0)
+    training_sample = model.sample(training_labels, EVEN = 2)
+    print ('\n')
+    print ("Training size is: {}".format(training_sample.shape[0]))
+    model.fit(haiti_map, custom_data = X[train_segs][training_sample], custom_labels=y[train_segs][training_sample])
+    proba = model.predict_proba(haiti_map, custom_data = X, custom_labels=y)
+    print haiti_map.masks['damage'].shape
+    g_truth = haiti_map.masks['damage'].reshape(4096,4096)
+    if show:
+        fig, AUC, _,_,_,_ = analyze_results.ROC(haiti_map, g_truth[:,2048:].ravel(), proba[:,2048:].ravel(), 'Haiti Left')
+        fig.savefig('al/ROC_{}.png'.format(np.where(training_labels != -1)[0].shape[0]), format='png')
+        plt.close(fig)
+        AUC = analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
+    else:
+        AUC = analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
+        #AUC = sklearn.metrics.roc_auc_score(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
+    return AUC
 
 
 def uncertain_order(importance, valid_indices, decreasing = True):
@@ -110,6 +132,33 @@ def rf_uncertainty(next_map, X, training_labels, show):
     # This returns only the indices whose values are -1 with most uncertain first
     return uncertain_order(uncertainties, unknown_indcs, decreasing=True)
 
+
+def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show):
+    model = ObjectClassifier(verbose = 0)
+    training_sample = model.sample(training_labels, EVEN = 2)
+    print ('\n')
+    print ("Training size is: {}".format(training_sample.shape[0]))
+    model.fit(haiti_map, custom_data = X[train_segs][training_sample], custom_labels=y[train_segs][training_sample])
+    prediction = model.predict_proba_segs(haiti_map, custom_data = X, custom_labels=y)
+    if show:
+        lab_train_indcs = np.where(training_labels != -1)[0]
+        print training_labels.shape, lab_train_indcs.shape, np.max(lab_train_indcs)
+        print train_segs.shape, np.max(train_segs)
+        lab_indcs = train_segs[lab_train_indcs]
+        print lab_indcs.shape, np.max(lab_indcs)
+        img = cv2.cvtColor(haiti_map.mask_segments_by_indx(lab_indcs, 20, opacity = 1, with_img = True)[:,:2048,:], cv2.COLOR_BGR2RGB)
+        cv2.imwrite('al/selected_{}.png'.format(np.where(training_labels != -1)[0].shape[0]), img)
+        fig = plt.figure()
+        plt.imshow(prediction[haiti_map.segmentations[20][1].astype('int')[:,:2048]], cmap = 'seismic', norm = plt.Normalize(0,1))
+        fig.savefig('al/test_{}.png'.format(np.where(training_labels != -1)[0].shape[0]), format='png')
+        plt.close(fig)
+    unknown_indcs = np.where(training_labels == -1)[0]
+    uncertainties = 1-np.abs(prediction[train_segs]-.5)
+    # This returns only the indices whose values are -1 with most uncertain first
+    return uncertain_order(uncertainties.ravel(), unknown_indcs, decreasing=True)
+
+
+
 def random_uncertainty(training_labels, show):
     return np.random.permutation(np.where(training_labels == -1)[0])
 
@@ -119,7 +168,50 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = False):
+def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 1000, verbose = 1, show = True):
+    print ("Setting up {}".format(run_num))
+    haiti_map = map_overlay.haiti_setup()
+    segs = haiti_map.segmentations[20][1].ravel().astype('int')
+    left = np.unique(segs.reshape(haiti_map.shape2d)[:,:2048]).astype(int)
+    right = np.unique(segs.reshape(haiti_map.shape2d)[:,2048:]).astype(int)
+    #top = np.unique(segs.reshape(haiti_map.shape2d)[:2048,:]).astype(int)
+    #bottom = np.unique(segs.reshape(haiti_map.shape2d)[2048:,:]).astype(int)
+    train_segs, test_segs = left, right
+    
+    print ('done setting up {}'.format(run_num))
+    model = ObjectClassifier(verbose = 0)
+    X, y = model._get_X_y(haiti_map, 'damage', custom_fn = 'damagelabels20/Jared.csv')
+    X_train, y_train = X[train_segs], y[train_segs]
+    X_test, y_test = X[test_segs], y[test_segs]
+
+    training_labels = np.ones_like(y_train)*-1
+    rocs = []
+    #set initial values
+    print ('setting values')
+    for i in range(2):
+        training_labels[np.random.choice(np.where(y_train==i)[0], start_n//2, replace = False)] = i
+    #Test initial performance
+    print('about to test progress for first time')
+    next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
+    print next_roc
+    rocs.append(next_roc)
+    pbar = custom_progress()
+    for i in pbar(range(n_updates)):
+        #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
+        #most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
+        most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show)#random_uncertainty(training_labels, show)
+        new_training = most_uncertain[:step_n]
+        #The following step simulates the expert giving the new labels
+        training_labels[new_training] = y_train[new_training]
+        #Test predictive performance on other map
+        next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
+        print next_roc
+        rocs.append(next_roc)
+        np.savetxt('al/rocs_random_{}.csv'.format(run_num), rocs, delimiter = ',')
+    return np.array(rocs)
+
+
+def main(run_num, start_n=50, step_n=50, n_updates = 200, verbose = 1, show = True):
     '''
     Runs active learning on train, and tests on the other map. Starts with start_n labels, and increments by step_n size batches.
     If method is UNCERT, picks new indices with bootstrap Uncertainty, with a bootstrap size of boot_n.
@@ -144,6 +236,7 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
     #Test initial performance
     print('about to test progress for first time')
     next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
+    print next_roc
     rocs.append(next_roc)
     pbar = custom_progress()
     for i in pbar(range(n_updates)):
@@ -155,6 +248,7 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
         training_labels[new_training] = train_truth[new_training]
         #Test predictive performance on other map
         next_roc = test_progress(map_train, map_test, X_train, training_labels, test_truth, show)
+        print next_roc
         rocs.append(next_roc)
         np.savetxt('al_3-2_3-3/rocs_random_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
@@ -162,4 +256,6 @@ def main(run_num, start_n=100, step_n=100, n_updates = 200, verbose = 1, show = 
 
 
 if __name__ == '__main__':
-    Parallel(n_jobs=10)(delayed(main)(i) for i in range(10))
+    main_haiti(0)
+    #main(0)
+    #Parallel(n_jobs=10)(delayed(main_haiti)(i) for i in range(10))

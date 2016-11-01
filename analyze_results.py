@@ -167,6 +167,29 @@ def average_class_prob(map_test, ground_truth, full_predict, name):
     return np.sum(ground_truth.ravel().astype('float')*full_predict.ravel())/(np.sum(ground_truth.ravel()))
 
 
+
+def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
+    FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
+    min_i = 0
+    max_i = TPRs.shape[0]
+    while max_i-min_i > 1:
+        test_i = np.floor((max_i+min_i)/2)
+        test = TPRs[test_i]
+        if test == TPR:
+            min_i = test_i
+            max_i = test_i+1
+        elif TPRs[test_i+1]<TPR:
+            min_i = test_i + 1
+        else:
+            max_i = test_i
+    indx = min_i
+    slope = (threshs[indx+1]-threshs[indx])/(TPRs[indx+1]-TPRs[indx])
+    b = threshs[indx]-slope*TPRs[indx]
+    thresh = slope*TPR + b
+    return confusion_analytics(ground_truth.ravel(), full_predict.ravel()>thresh)[0]
+
+
+
 def ROC(map_test, ground_truth, full_predict, name, save = False):
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
     opt_thresh = threshs[np.argmin(FPRs**2 + (1-TPRs)**2)]

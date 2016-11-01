@@ -31,13 +31,24 @@ def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
     map_test.new_seg_mask(np.loadtxt('damagelabels50/{}-3-3.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
     return map_train, map_test
 
-def haiti_setup(segs = [], base_seg = 400, label_name = "Jared"):
+def test( label_name = "Jared"):
+    #Generate Maps
+    map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
+    #Add Segmentations
+    #map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-50.shp',50)
+    #plt.imshow(map_train.mask_segments_by_indx(np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ','), 50, with_img = True))
+    map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
+    plt.imshow(map_train.maskImg('damage'))
+    plt.show()
+
+def haiti_setup(segs = [50], base_seg = 20, label_name = "Jared"):
     haiti_map = MapOverlay('haiti/haiti_1002003.tif')
     haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(base_seg), base_seg)
     for seg in segs:
         haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(seg), seg)
-    plt.imshow(haiti_map.mask_segments_by_indx(np.arange(100), 400))
-    plt.show()
+    damage = np.loadtxt('damagelabels20/{}.csv'.format(label_name), delimiter = ',')
+    haiti_map.new_seg_mask(np.loadtxt('damagelabels20/{}.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
+    return haiti_map
 
 
 class MapOverlay:
@@ -58,22 +69,16 @@ class MapOverlay:
         if ds is None:
             print('Could not open ' + map_fn)
             sys.exit(1)
-
         self.map_ds = ds
         geotransform = ds.GetGeoTransform()
-
         self.map_fn = map_fn
         self.img = cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB)
+        self.shape = self.img.shape
+        self.shape2d = self.img.shape[:2]
         self.bw_img = cv2.imread(map_fn, 0)
-
-        self.cols = ds.RasterXSize
-        self.rows = ds.RasterYSize
-        self.bands = ds.RasterCount
-
-        self.originX = geotransform[0]
-        self.originY = geotransform[3]
-        self.pixelWidth = geotransform[1]
-        self.pixelHeight = geotransform[5]
+        self.cols, self.rows, self.bands = ds.RasterXSize, ds.RasterYSize, ds.RasterCount
+        self.originX, self.originY = geotransform[0], geotransform[3]
+        self.pixelWidth, self.pixelHeight = geotransform[1], geotransform[5]
 
     
     def getMapData(self):
@@ -85,26 +90,6 @@ class MapOverlay:
         return self.img.reshape(h*w, c)
 
 
-    def get_features(self):
-        return self.features, self.label_names
-    
-    def gen_features(self, edge_k, hog_k, hog_bins):
-        '''
-        input:
-            - myMap: MapObject
-        output:
-            - feature representation of map
-        '''
-        rgb, rgb_name = features.normalized(self.getMapData())
-        ave_rgb, ave_rgb_name = features.blurred(self.img)
-        edges, edges_name = features.edge_density(self.bw_img, edge_k, amp = 1)
-        hog, hog_name = features.hog(self.bw_img, hog_k)
-        data = np.concatenate((rgb, ave_rgb, edges, hog), axis = 1)
-        names = np.concatenate((rgb_name, ave_rgb_name, edges_name, hog_name))
-        self.features =  data
-        self.label_names =  names
-
-
     def getLabels(self, mask_name):
         '''
         INPUT: 
@@ -113,7 +98,6 @@ class MapOverlay:
             - (n x 1 ndarray) Vector of binary labels indicating which pixels lie within mask
         '''
         return self.masks[mask_name]
-
 
     
     def latlonToPx(self, x, y):
@@ -129,7 +113,7 @@ class MapOverlay:
         return (xOffset, yOffset)
 
     
-    def _projectShape(self, shape_fn, mask_name):
+    def _projectShape(self, shape_fn, mask_name, proj = 4326):
         '''
         INPUT: 
             -shape_fn:  (string) Shape filename to be reprojected
@@ -146,29 +130,24 @@ class MapOverlay:
           print('Could not open file')
           return None
         in_lyr = in_ds.GetLayer()
-
-
         targetSR = osr.SpatialReference()
         targetSR.ImportFromWkt(self.map_ds.GetProjectionRef())
-
         coordTrans = osr.CoordinateTransformation(in_lyr.GetSpatialRef(), targetSR)
-
         outfile = 'cache\{}.shp'.format(mask_name)
         outDataSet = driver.CreateDataSource(outfile)
-
         dest_srs = osr.SpatialReference()
         dest_srs.ImportFromEPSG(4326)
         outLayer = outDataSet.CreateLayer(mask_name, targetSR, geom_type=ogr.wkbMultiPolygon)
-
-
         inLayerDefn = in_lyr.GetLayerDefn()
+        fid_fd = ogr.FieldDefn('FID', ogr.OFTReal)
+        print fid_fd.GetType()
         for i in range(0, inLayerDefn.GetFieldCount()):
             fieldDefn = inLayerDefn.GetFieldDefn(i)
             outLayer.CreateField(fieldDefn)
-
+        outLayer.CreateField(fid_fd)
         outLayerDefn = outLayer.GetLayerDefn()
-
         inFeature = in_lyr.GetNextFeature()
+        indx=0
         while inFeature:
             # get the input geometry
             geom = inFeature.GetGeometryRef()
@@ -178,15 +157,16 @@ class MapOverlay:
             outFeature = ogr.Feature(outLayerDefn)
             # set the geometry and attribute
             outFeature.SetGeometry(geom)
-            for i in range(0, outLayerDefn.GetFieldCount()):
+            for i in range(0, outLayerDefn.GetFieldCount()-1): #-1 to ignore fid
                 outFeature.SetField(outLayerDefn.GetFieldDefn(i).GetNameRef(), inFeature.GetField(i))
+            outFeature.SetField('FID', indx)
             # add the feature to the shapefile
             outLayer.CreateFeature(outFeature)
             # destroy the features and get the next input feature
             outFeature.Destroy()
             inFeature.Destroy()
             inFeature = in_lyr.GetNextFeature()
-
+            indx+=1
         return outDataSet, targetSR
 
     def mask_helper(self, img, mask, opacity = 0.4):
@@ -216,20 +196,14 @@ class MapOverlay:
             masks_segments based on i, a boolean list indicating labelled segments
         '''
         mask = np.in1d(self.segmentations[level][1],np.where(i))
-        if with_img:
-            return self.mask_helper(self.img, mask)
-        else:
-            return mask
+        return self.mask_helper(self.img, mask) if with_img else mask
 
-    def mask_segments_by_indx(self, indcs, level, with_img = True):
+    def mask_segments_by_indx(self, indcs, level,  with_img = True, opacity = .4):
         '''
             masks_segments based on indcs, a list of indices
         '''
         mask = np.in1d(self.segmentations[level][1],indcs)
-        if with_img:
-            return self.mask_helper(self.img, mask)
-        else:
-            return mask
+        return self.mask_helper(self.img, mask, opacity) if with_img else mask
 
 
     def new_seg_mask(self, indcs, level, mask_name):
@@ -253,8 +227,27 @@ class MapOverlay:
         self.newPxMask((old_mask1+old_mask2 > 0), new)
     
 
+    def rasterize_shp(self, shape_fn, mask_name, proj = 4326):
+        dataSource, targetSR =  self._projectShape(shape_fn, mask_name, proj)
+        layer = dataSource.GetLayer()
+        lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+        maxx, miny = self.latlonToPx(lat_min,lon_max)
+        minx, maxy = self.latlonToPx(lat_max,lon_min)
+        nrows, ncols = min(maxy-miny, self.rows), min(maxx-minx, self.cols)
+        minx, miny, maxx, maxy = max(0, minx), max(0, miny), min(maxx, self.cols), min(maxy, self.rows)
+        xres=(lat_max-lat_min)/float(maxx-minx)
+        yres=(lon_max-lon_min)/float(maxy-miny)
+        geotransform=(lat_min,xres,0,lon_max,0, -yres)
+        dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Int32)
+        dst_ds.SetGeoTransform(geotransform)
+        padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
+        gdal.RasterizeLayer(dst_ds, [1], layer, options = ['ATTRIBUTE=FID'])
+        mask = np.pad(dst_ds.GetRasterBand(1).ReadAsArray(), padding, mode = 'constant', constant_values = 0)
+        mask = np.fliplr(mask)
+        dataSource.Destroy()
+        return mask
 
-    def newMask(self, shape_fn, mask_name):
+    def newMask(self, shape_fn, mask_name, proj = 4326):
         ''' 
         INPUT: 
             -shape_fn:  (string) Shape filename to be reprojected
@@ -263,99 +256,21 @@ class MapOverlay:
                  Where the shapes cover and '0' in all other locations.
                  Additionally adds the mask to the map dictionary
         '''
-        dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
-
-        layer = dataSource.GetLayer()
-        lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
-
-        maxx, miny = self.latlonToPx(lat_min,lon_max)
-        minx, maxy = self.latlonToPx(lat_max,lon_min)
-        nrows = min(maxy-miny, self.rows)
-        ncols = min(maxx-minx, self.cols)
-        minx = max(0, minx)
-        miny = max(0, miny)
-        maxx = min(maxx, self.cols)
-        maxy = min(maxy, self.rows)
-
-        xres=(lat_max-lat_min)/float(maxx-minx)
-        yres=(lon_max-lon_min)/float(maxy-miny)
-
-        geotransform=(lat_min,xres,0,lon_max,0, -yres)
-        dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
-        dst_ds.SetGeoTransform(geotransform)
-        padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
-
-        band = dst_ds.GetRasterBand(1) #Initialize with 1 band
-        band.Fill(0) #initialise raster with zeros
-        band.SetNoDataValue(0)
-        band.FlushCache()
-
-        gdal.RasterizeLayer(dst_ds, [1], layer)#, options = ["ATTRIBUTE=ID"])
-
-        mask = dst_ds.GetRasterBand(1).ReadAsArray()
-        mask = np.pad(mask, padding, mode = 'constant', constant_values = 0)
-        
-        mask = np.fliplr(mask)
-        mask = mask>0
+        mask = self.rasterize_shp(shape_fn, mask_name, proj)>0
         self.masks[mask_name] = mask.ravel()
 
-    def new_segmentation(self, shape_fn, level, mask_name = 'segments'):
+    def new_segmentation(self, shape_fn, level, mask_name = 'segments', proj = 4326, save = True):
 
         name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
         p = os.path.join('processed_segments', "{}.npy".format(name))
         #self.segment_name = name
-        if os.path.exists(p):
+        if os.path.exists(p) and save:
             self.segmentations[level] =  (name,np.load(p))
         else:
-            print('0')
-            dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
-            print dataSource
-            layer = dataSource.GetLayer()
-            lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
-            print('1')
-            maxx, miny = self.latlonToPx(lat_min,lon_max)
-            minx, maxy = self.latlonToPx(lat_max,lon_min)
-            nrows = min(maxy-miny, self.rows)
-            ncols = min(maxx-minx, self.cols)
-            minx = max(0, minx)
-            miny = max(0, miny)
-            maxx = min(maxx, self.cols)
-            maxy = min(maxy, self.rows)
-
-            xres=(lat_max-lat_min)/float(maxx-minx)
-            yres=(lon_max-lon_min)/float(maxy-miny)
-            print('2')
-            geotransform=(lat_min,xres,0,lon_max,0, -yres)
-            dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Byte)
-            dst_ds.SetGeoTransform(geotransform)
-            padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
-
-            nfeatures = layer.GetFeatureCount()
-            print(nfeatures)
-            print("starting map segmentation reading")
-            full_mask = np.zeros((self.rows, self.cols))
-            pbar = custom_progress()
-            for i in pbar(range(nfeatures)):
-                band = dst_ds.GetRasterBand(1) #Initialize with 1 band
-                band.Fill(0) #initialise raster with zeros
-                band.SetNoDataValue(0)
-                band.FlushCache()
-                new_layer = dataSource.CreateLayer("{}_{}".format(mask_name,i), targetSR, geom_type=ogr.wkbMultiPolygon)
-                feature = layer.GetFeature(i)
-                new_layer.CreateFeature(feature)
-                layer.DeleteFeature(i)
-                gdal.RasterizeLayer(dst_ds, [1], new_layer)
-                mask = dst_ds.GetRasterBand(1).ReadAsArray()
-                mask = mask>0
-                feature.Destroy()
-                full_mask += mask*i
-                dataSource.DeleteLayer("{}_{}".format(mask_name,i))
-            print("finished map segmentation reading")
-            full_mask = np.pad(full_mask, padding, mode = 'constant', constant_values = 0)
-            full_mask = np.fliplr(full_mask)
-            dataSource.Destroy()
-            self.segmentations[level] = (name,full_mask)
-            np.save(p, full_mask)
+            mask = self.rasterize_shp(shape_fn, mask_name, proj)
+            self.segmentations[level] = (name,mask)
+            if save:
+                np.save(p, mask)
 
 if __name__ == '__main__':
     haiti_setup()
