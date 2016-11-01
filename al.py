@@ -41,7 +41,7 @@ def test_progress(map_train, map_test, X_train, training_labels, test_truth, sho
         return sklearn.metrics.roc_auc_score(test_truth[test_segs], prediction.ravel())
     return AUC   
 
-def test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show):
+def test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, thresh, show):
     model = ObjectClassifier(verbose = 0)
     training_sample = model.sample(training_labels, EVEN = 2)
     print ('\n')
@@ -54,11 +54,9 @@ def test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs,
         fig, AUC, _,_,_,_ = analyze_results.ROC(haiti_map, g_truth[:,2048:].ravel(), proba[:,2048:].ravel(), 'Haiti Left')
         fig.savefig('al/ROC_{}.png'.format(np.where(training_labels != -1)[0].shape[0]), format='png')
         plt.close(fig)
-        AUC = analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
-    else:
-        AUC = analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
-        #AUC = sklearn.metrics.roc_auc_score(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
-    return AUC
+    Prec, FPR = analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel(), TPR = thresh)
+    #AUC = sklearn.metrics.roc_auc_score(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
+    return Prec, FPR
 
 
 def uncertain_order(importance, valid_indices, decreasing = True):
@@ -168,7 +166,12 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask[segs]
 
-def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, show = False):
+def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, thresh =.95, show = False):
+    if run_num >= 10:
+        thresh = .95
+    else:
+        thresh = .9
+
     print ("Setting up {}".format(run_num))
     haiti_map = map_overlay.haiti_setup()
     segs = haiti_map.segmentations[20][1].ravel().astype('int')
@@ -185,7 +188,8 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     X_test, y_test = X[test_segs], y[test_segs]
 
     training_labels = np.ones_like(y_train)*-1
-    rocs = []
+    fprs = []
+    precs = []
     #set initial values
     print ('setting values')
     np.random.seed()
@@ -194,11 +198,11 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     #Test initial performance
     print np.where(training_labels==1)[0], np.where(training_labels==0)[0]
     print('about to test progress for first time')
-    next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
-    print next_roc
-    rocs.append(next_roc)
+    next_prec, next_fpr = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, thresh, show)
+    precs.append(next_prec)
+    fprs.append(next_fpr)
     pbar = custom_progress()
-    for i in pbar(range(n_updates)):
+    for i in range(n_updates):
         #most_uncertain = LCB(map_train, X_train, training_labels, 10, show)
         #most_uncertain = rf_uncertainty(map_train, X_train, training_labels, show)
         most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show)#random_uncertainty(training_labels, show)
@@ -206,10 +210,11 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = y_train[new_training]
         #Test predictive performance on other map
-        next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
-        print next_roc
-        rocs.append(next_roc)
-        np.savetxt('al/rocs_rf_90_prec_{}.csv'.format(run_num), rocs, delimiter = ',')
+        next_prec, next_fpr = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, thresh, show)
+        precs.append(next_prec)
+        fprs.append(next_fpr)
+        np.savetxt('al/rocs_rf_{}_prec_{}.csv'.format(thresh, run_num%10), precs, delimiter = ',')
+        np.savetxt('al/rocs_rf_{}_fpr_{}.csv'.format(thresh, run_num%10), fprs, delimiter = ',')
     return np.array(rocs)
 
 
@@ -260,4 +265,4 @@ def main(run_num, start_n=50, step_n=50, n_updates = 200, verbose = 1, show = Tr
 if __name__ == '__main__':
     #main_haiti(0)
     #main(0)
-    Parallel(n_jobs=15)(delayed(main_haiti)(i) for i in range(15))
+    Parallel(n_jobs=20)(delayed(main_haiti)(i) for i in range(20))

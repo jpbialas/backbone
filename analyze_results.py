@@ -65,6 +65,8 @@ def confusion_analytics(y_true, y_pred):
     FNR = 1-recall
     return round(FPR,5), round(FNR, 5), conf
 
+
+
 def prec_recall(y_true, y_pred):
     '''
     INPUT:
@@ -186,7 +188,9 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .90):
     slope = (threshs[indx+1]-threshs[indx])/(TPRs[indx+1]-TPRs[indx])
     b = threshs[indx]-slope*TPRs[indx]
     thresh = slope*TPR + b
-    return metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)#confusion_analytics(ground_truth.ravel(), full_predict.ravel()>thresh)[0]
+    precision = metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
+    FPR = FPRs[min_i]
+    return  precision, FPR
 
 
 
