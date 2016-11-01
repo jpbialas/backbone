@@ -200,8 +200,8 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     #Test initial performance
     print np.where(training_labels==1)[0], np.where(training_labels==0)[0]
     print('about to test progress for first time')
-    next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .90, show)
-    next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .95, show)
+    next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .1, show)
+    next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .05, show)
     precs90.append(next_prec90)
     fprs90.append(next_fpr90)
     precs95.append(next_prec95)
@@ -216,8 +216,8 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
         #The following step simulates the expert giving the new labels
         training_labels[new_training] = y_train[new_training]
         #Test predictive performance on other map
-        next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .90, show)
-        next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .95, show)
+        next_prec90, next_fpr90 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .1, show)
+        next_prec95, next_fpr95 = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, .05, show)
         precs90.append(next_prec90)
         fprs90.append(next_fpr90)
         precs95.append(next_prec95)
