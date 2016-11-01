@@ -209,7 +209,7 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
         next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
         print next_roc
         rocs.append(next_roc)
-        np.savetxt('al/rocs_rf_95_{}.csv'.format(run_num), rocs, delimiter = ',')
+        np.savetxt('al/rocs_rf_90_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
 
 
