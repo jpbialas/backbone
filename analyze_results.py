@@ -171,7 +171,7 @@ def average_class_prob(map_test, ground_truth, full_predict, name):
 
 
 def FPR_from_FNR(ground_truth, full_predict, TPR = .90):
-    TPRs, FPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
+    FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
     min_i = 0
     max_i = TPRs.shape[0]
     while max_i-min_i > 1:
@@ -188,6 +188,7 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .90):
     slope = (threshs[indx+1]-threshs[indx])/(TPRs[indx+1]-TPRs[indx])
     b = threshs[indx]-slope*TPRs[indx]
     thresh = slope*TPR + b
+    print 'threshold is', thresh
     precision = metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
     FPR = FPRs[min_i]
     return  precision, FPR
