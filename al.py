@@ -188,9 +188,11 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     rocs = []
     #set initial values
     print ('setting values')
+    np.random.seed()
     for i in range(2):
         training_labels[np.random.choice(np.where(y_train==i)[0], start_n//2, replace = False)] = i
     #Test initial performance
+    print np.where(training_labels==1)[0], np.where(training_labels==0)[0]
     print('about to test progress for first time')
     next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
     print next_roc
@@ -207,7 +209,7 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
         next_roc = test_haiti_progress(haiti_map, X, y, training_labels, train_segs, test_segs, show)
         print next_roc
         rocs.append(next_roc)
-        np.savetxt('al/rocs_random_{}.csv'.format(run_num), rocs, delimiter = ',')
+        np.savetxt('al/rocs_rf_95_{}.csv'.format(run_num), rocs, delimiter = ',')
     return np.array(rocs)
 
 
