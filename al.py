@@ -131,7 +131,7 @@ def rf_uncertainty(next_map, X, training_labels, show):
     return uncertain_order(uncertainties, unknown_indcs, decreasing=True)
 
 
-def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, thresh = .5, show):
+def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, thresh, show):
     model = ObjectClassifier(verbose = 0)
     training_sample = model.sample(training_labels, EVEN = 2)
     print ('\n')
