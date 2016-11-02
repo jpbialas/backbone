@@ -131,7 +131,7 @@ def rf_uncertainty(next_map, X, training_labels, show):
     return uncertain_order(uncertainties, unknown_indcs, decreasing=True)
 
 
-def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show):
+def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, thresh = .5, show):
     model = ObjectClassifier(verbose = 0)
     training_sample = model.sample(training_labels, EVEN = 2)
     print ('\n')
@@ -151,7 +151,7 @@ def rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show):
         fig.savefig('al/test_{}.png'.format(np.where(training_labels != -1)[0].shape[0]), format='png')
         plt.close(fig)
     unknown_indcs = np.where(training_labels == -1)[0]
-    uncertainties = 1-np.abs(prediction[train_segs]-.03)
+    uncertainties = 1-np.abs(prediction[train_segs]-thresh)
     # This returns only the indices whose values are -1 with most uncertain first
     return uncertain_order(uncertainties.ravel(), unknown_indcs, decreasing=True)
 
@@ -167,11 +167,17 @@ def indcs2bools(indcs, segs):
     return seg_mask[segs]
 
 def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, show = False):
+    u_name = 'rf'
+    '''
     if run_num >= 8:
         u_name = 'rf'
     else:
         u_name = 'random'
-
+    '''
+    if run_num >=8:
+        thresh = .12
+    else:
+        thresh = .6
     print ("Setting up {}".format(run_num))
     haiti_map = map_overlay.haiti_setup()
     segs = haiti_map.segmentations[20][1].ravel().astype('int')
@@ -222,10 +228,10 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
         fprs90.append(next_fpr90)
         precs95.append(next_prec95)
         fprs95.append(next_fpr95)
-        np.savetxt('al/rocs_{}_0.90_prec_{}.csv'.format(u_name, run_num%8), precs90, delimiter = ',')
-        np.savetxt('al/rocs_{}_0.90_fpr_{}.csv'.format(u_name, run_num%8), fprs90, delimiter = ',')
-        np.savetxt('al/rocs_{}_0.95_prec_{}.csv'.format(u_name, run_num%8), precs95, delimiter = ',')
-        np.savetxt('al/rocs_{}_0.95_fpr_{}.csv'.format(u_name, run_num%8), fprs95, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.90_prec_{}_{}.csv'.format(u_name, thresh, run_num%8), precs90, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.90_fpr_{}_{}.csv'.format(u_name, thresh, run_num%8), fprs90, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.95_prec_{}_{}.csv'.format(u_name, thresh, run_num%8), precs95, delimiter = ',')
+        np.savetxt('al/rocs_{}_0.95_fpr_{}_{}.csv'.format(u_name, thresh, run_num%8), fprs95, delimiter = ',')
     return np.array(rocs)
 
 

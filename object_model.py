@@ -147,7 +147,7 @@ def main(labels_2, labels_3, threshs_2, threshs_3, thresh):
         print sklearn.metrics.roc_auc_score(truth_2.ravel()>i, pred.ravel())
 
 def main_haiti():
-    p_thresh = .7
+    p_thresh = .06
     haiti_map = map_overlay.haiti_setup()
     model = ObjectClassifier()
     X, y = model._get_X_y(haiti_map, 'damage', custom_fn = 'damagelabels20/Jared.csv')
