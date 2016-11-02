@@ -215,7 +215,7 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     pbar = custom_progress()
     for i in range(n_updates):
         if u_name == 'rf':
-            most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, show)
+            most_uncertain = rf_uncertainty_haiti(haiti_map, X, y, training_labels, train_segs, thresh, show)
         else:
             most_uncertain = random_uncertainty(training_labels, show)
         new_training = most_uncertain[:step_n]
