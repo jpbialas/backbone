@@ -170,7 +170,7 @@ def average_class_prob(map_test, ground_truth, full_predict, name):
 
 
 
-def FPR_from_FNR(ground_truth, full_predict, TPR = .90):
+def FPR_from_FNR(ground_truth, full_predict, TPR = .8):
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
     min_i = 0
     max_i = TPRs.shape[0]
