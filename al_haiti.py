@@ -22,7 +22,7 @@ class al:
         self.postfix = postfix + '_rf' if not random else postfix+'_random'
         self.train = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
         self.test = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
-        self.uncertainty = self.rf_uncertainty
+        self.uncertainty = self.rf_uncertainty if not random else self.random_uncertainty
         self.update_labels = self.simple_update
         self.haiti_map = map_overlay.haiti_setup()
         segs = self.haiti_map.segmentations[20][1].ravel().astype('int')
