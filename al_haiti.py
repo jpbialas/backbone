@@ -95,7 +95,8 @@ class al:
 
 
     def random_uncertainty(self):
-        self.show_selected()
+        if self.show:
+            self.show_selected()
         return np.random.permutation(np.where(self.training_labels == -1)[0])
 
 
