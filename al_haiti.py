@@ -134,12 +134,10 @@ class al:
         for i in range(self.updates):
             self.update()
 
-def run_al(al):
-    al.run()
+def run_al(i, n_runs):
+    next_al = al(postfix = '_{}'.format(i%(n_runs/2)), random = i<n_runs/2)
+    next_al.run()
 
 if __name__ == '__main__':
-    all_al = []
-    n_runs = 16
-    for i in range(n_runs):
-        all_al.append(al(postfix = '_{}'.format(i%(n_runs/2)), random = i<n_runs/2))
-    Parallel(n_jobs=n_runs)(delayed(run_al)(al) for al in all_al)
+    n_runs = 2
+    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))
