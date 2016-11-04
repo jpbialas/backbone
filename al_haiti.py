@@ -139,5 +139,5 @@ def run_al(i, n_runs):
     next_al.run()
 
 if __name__ == '__main__':
-    n_runs = 2
+    n_runs = 16
     Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))
