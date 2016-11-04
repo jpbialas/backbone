@@ -191,12 +191,12 @@ class MapOverlay:
         mask = self.masks[mask_name]
         return self.mask_helper(self.img, mask, opacity)
 
-    def mask_segments(self, i, level, with_img = True):
+    def mask_segments(self, i, level, with_img = True, opacity = .4):
         '''
             masks_segments based on i, a boolean list indicating labelled segments
         '''
         mask = np.in1d(self.segmentations[level][1],np.where(i))
-        return self.mask_helper(self.img, mask) if with_img else mask
+        return self.mask_helper(self.img, mask, opacity) if with_img else mask
 
     def mask_segments_by_indx(self, indcs, level,  with_img = True, opacity = .4):
         '''

@@ -153,62 +153,22 @@ def main_haiti():
     X, y = model._get_X_y(haiti_map, 'damage', custom_fn = 'damagelabels20/Jared.csv')
     print X.shape, y.shape
     segs = haiti_map.segmentations[20][1].astype('int')
-    left = np.unique(segs.reshape(haiti_map.shape2d)[:,:2048]).astype(int)
-    right = np.unique(segs.reshape(haiti_map.shape2d)[:,2048:]).astype(int)
-    top = np.unique(segs.reshape(haiti_map.shape2d)[:2048,:]).astype(int)
-    bottom = np.unique(segs.reshape(haiti_map.shape2d)[2048:,:]).astype(int)
+    left = np.unique(segs.reshape(haiti_map.shape2d)[4096/3:,:4096/2]).astype(int)
+    right = np.unique(segs.reshape(haiti_map.shape2d)[4096/3:,4096/2:4096]).astype(int)
 
 
     model.fit(haiti_map, custom_data = X[left], custom_labels=y[left])
     #model.feature_importance()
     proba = model.predict_proba(haiti_map, custom_data = X, custom_labels=y)
     g_truth = haiti_map.masks['damage'].reshape(4096,4096)
-    analyze_results.ROC(haiti_map, g_truth[:,2048:].ravel(), proba[:,2048:].ravel(), 'Haiti Right')
-    print analyze_results.FPR_from_FNR(g_truth[:,2048:].ravel(), proba[:,2048:].ravel())
+    analyze_results.ROC(haiti_map, g_truth[4096/3:,4096/2:4096].ravel(), proba[4096/3:,4096/2:4096].ravel(), 'Haiti Right')
+    print analyze_results.FPR_from_FNR(g_truth[4096/3:,4096/2:4096].ravel(), proba[4096/3:,4096/2:4096].ravel())
     #analyze_results.probability_heat_map(haiti_map, proba, 'Haiti Right', save = False)
     fig = plt.figure()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[:, 2048:,:])
-    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[:, 2048:], colors = 'green')
+    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[4096/3:,4096/2:4096,:])
+    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[4096/3:,4096/2:4096], colors = 'green')
     fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     plt.xticks([]), plt.yticks([])
-    '''
-    model.fit(haiti_map, custom_data = X[right], custom_labels=y[right])
-    model.feature_importance()
-    proba = model.predict_proba(haiti_map, custom_data = X, custom_labels=y)
-    g_truth = haiti_map.masks['damage'].reshape(4096,4096)
-    print analyze_results.ROC(haiti_map, g_truth[:,:2048].ravel(), proba[:,:2048].ravel(), 'Haiti Left')[1:3]
-    #analyze_results.probability_heat_map(haiti_map, proba, 'Haiti Left', save = False)
-    fig = plt.figure()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[:,:2048,:])
-    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[:,:2048], colors = 'green')
-    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-    plt.xticks([]), plt.yticks([])
-
-    model.fit(haiti_map, custom_data = X[top], custom_labels=y[top])
-    #model.feature_importance()
-    proba = model.predict_proba(haiti_map, custom_data = X, custom_labels=y)
-    g_truth = haiti_map.masks['damage'].reshape(4096,4096)
-    print analyze_results.ROC(haiti_map, g_truth[2048:,:].ravel(), proba[2048:,:].ravel(), 'Haiti Bottom')[1:3]
-    #analyze_results.probability_heat_map(haiti_map, proba, 'Haiti Bottom', save = False)
-    fig = plt.figure()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[2048:,:,:])
-    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[2048:,:], colors = 'green')
-    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-    plt.xticks([]), plt.yticks([])
-
-
-    model.fit(haiti_map, custom_data = X[bottom], custom_labels=y[bottom])
-    #model.feature_importance()
-    proba = model.predict_proba(haiti_map, custom_data = X, custom_labels=y)
-    g_truth = haiti_map.masks['damage'].reshape(4096,4096)
-    print analyze_results.ROC(haiti_map, g_truth[:2048,:].ravel(), proba[:2048,:].ravel(), 'Haiti Top')[1:3]
-    #analyze_results.probability_heat_map(haiti_map, proba, 'Haiti Top', save = False)
-    fig = plt.figure()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[:2048,:,:])
-    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[:2048,:], colors = 'green')
-    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-    plt.xticks([]), plt.yticks([])
-    '''
 
     plt.show()
 

@@ -177,7 +177,7 @@ def main_haiti(run_num, start_n = 50, step_n=50, n_updates = 2000, verbose = 1, 
     if run_num >=8:
         thresh = .12
     else:
-        thresh = .6
+        thresh = .06
     print ("Setting up {}".format(run_num))
     haiti_map = map_overlay.haiti_setup()
     segs = haiti_map.segmentations[20][1].ravel().astype('int')
