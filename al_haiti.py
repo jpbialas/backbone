@@ -8,6 +8,7 @@ import numpy as np
 import sklearn
 from sklearn.externals.joblib import Parallel, delayed
 from convenience_tools import *
+from labeler import Labelers
 import cv2
 
 class al:    
@@ -23,27 +24,26 @@ class al:
         self.train = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
         self.test = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
         self.uncertainty = self.rf_uncertainty if not random else self.random_uncertainty
-        self.update_labels = self.simple_update
+        self.update_labels = self.donmez_update#self.simple_update
         self.haiti_map = map_overlay.haiti_setup()
         segs = self.haiti_map.segmentations[20][1].ravel().astype('int')
         segs = segs.reshape(self.haiti_map.shape2d)
         self.train_segs = np.unique(segs[self.train]).astype(int)
         self.test_segs = np.unique(segs[self.test]).astype(int)
-        print self.test_segs, self.test_segs.shape
         model = ObjectClassifier(verbose = 0)
-        X, y = model._get_X_y(self.haiti_map, 'damage', \
-                              custom_fn = 'damagelabels20/Jared.csv')
+        X, _ = model._get_X_y(self.haiti_map, 'damage', custom_labels = np.array([]))
         self.X_train, self.X_test = X[self.train_segs], X[self.test_segs]
-        self.y_train, self.y_test = y[self.train_segs], y[self.test_segs]
+        self.labelers = Labelers()
         self.fprs = []
-        self.training_labels = self._gen_training_labels()
+        self.training_labels = self._gen_training_labels(self.labelers.labeler('jaredsfrank@gmail.com'))
         self.test_progress()
 
-    def _gen_training_labels(self):
-        training_labels = np.ones_like(self.y_train)*-1
+    def _gen_training_labels(self, y_train):
+        training_labels = np.ones_like(self.train_segs)*-1
         np.random.seed()
         for i in range(2):
-            training_labels[np.random.choice(np.where(self.y_train==i)[0], self.start_n//2, replace = False)] = i
+            sub_samp = np.where(y_train[self.train_segs]==i)[0]
+            training_labels[np.random.choice(sub_samp, self.start_n//2, replace = False)] = i
         return training_labels
 
 
@@ -73,14 +73,13 @@ class al:
 
 
     def rf_uncertainty(self):
-        thresh = .06
+        thresh = .5
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.haiti_map, custom_data = self.X_train[training_sample],\
-                  custom_labels=self.y_train[training_sample])
+                  custom_labels=self.training_labels[training_sample])
         proba_segs = model.predict_proba_segs(self.haiti_map, \
-                                            custom_data = self.X_train,\
-                                            custom_labels=self.y_train)
+                                            custom_data = self.X_train)
         if self.show:
             self.show_selected()
             fig = plt.figure()
@@ -101,18 +100,25 @@ class al:
 
 
     def simple_update(self, new_training):
-        self.training_labels[new_training] = self.y_train[new_training]
+        self.training_labels[new_training] = self.labelers.labeler('jaredsfrank@gmail.com')[self.train_segs[new_training]]
+
+    def majority_vote(self, new_training):
+        self.training_labels[new_training] = self.labelers.majority_vote(self.train_segs[new_training])
+
+    def donmez_update(self, new_training):
+        self.training_labels[new_training] = self.labelers.donmez_vote(self.train_segs[new_training], 0.75, True)
+        print self.labelers.rewards
+        print self.labelers.UI()
 
 
     def test_progress(self):
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.haiti_map, custom_data = self.X_train[training_sample],\
-                  custom_labels=self.y_train[training_sample])
+                  custom_labels=self.training_labels[training_sample])
         seg_map = self.haiti_map.segmentations[20][1].astype('int')[self.test]
         proba_segs = model.predict_proba_segs(self.haiti_map, \
-                                              custom_data = self.X_test,\
-                                              custom_labels=self.y_test)
+                                              custom_data = self.X_test)
         proba = self.partial_segs_to_full(proba_segs, self.test_segs)[seg_map]
         g_truth = self.haiti_map.masks['damage'].reshape(4096,4096)[self.test]
         n_labeled = np.where(self.training_labels != -1)[0].shape[0]
@@ -140,5 +146,6 @@ def run_al(i, n_runs):
     next_al.run()
 
 if __name__ == '__main__':
-    n_runs = 16
-    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))
+    '''n_runs = 2
+    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))'''
+    al().run()

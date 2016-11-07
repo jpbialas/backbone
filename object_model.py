@@ -54,7 +54,6 @@ class ObjectClassifier():
             self.feat_names = feat_names
         else:
             X = custom_data
-            print 'X ', X.shape
         if custom_labels is None:
             fn = 'damagelabels50/{}-3-{}.csv'.format(label_name, img_num) if custom_fn == None else custom_fn
             damage_indices = np.loadtxt(fn, delimiter = ',', dtype = 'int')
@@ -62,7 +61,6 @@ class ObjectClassifier():
             y[damage_indices] = 1
         else:
             y = custom_labels
-            print 'Y ',y.shape
         return X, y
 
     def reset_model(self):
@@ -84,15 +82,15 @@ class ObjectClassifier():
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
 
-    def predict_proba(self, map_test, label_name = 'Jared', custom_labels = None, custom_data = None):
-        segment_probs = self.predict_proba_segs(map_test, label_name, custom_labels, custom_data)
+    def predict_proba(self, map_test, label_name = 'Jared', custom_data = None):
+        segment_probs = self.predict_proba_segs(map_test, label_name, custom_data)
         px_probs = segment_probs[map_test.segmentations[self.params['base_seg']][1].astype('int')]
         v_print('ending predict', self.verbose)
         return px_probs
 
-    def predict_proba_segs(self, map_test, label_name = 'Jared', custom_labels = None, custom_data = None):
+    def predict_proba_segs(self, map_test, label_name = 'Jared', custom_data = None):
         v_print('starting predict', self.verbose)
-        X, y = self._get_X_y(map_test, label_name, custom_labels, custom_data)
+        X, _ = self._get_X_y(map_test, label_name, np.array([]), custom_data)
         img_num = map_test.name[-1]
         self.test_name = analyze_results.gen_model_name("Segs", label_name, self.params['EVEN'], img_num, self.params['new_feats'])
         segment_probs = self.model.predict_proba(X)[:,1]

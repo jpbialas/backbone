@@ -189,7 +189,7 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
     b = threshs[indx]-slope*TPRs[indx]
     thresh = slope*TPR + b
     print 'threshold is', thresh
-    precision = metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
+    #precision = metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
     FPR = FPRs[min_i]
     return FPR
 

@@ -8,6 +8,9 @@ from convenience_tools import *
 import seg_features as sf
 
 def convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5):
+    '''
+        Used to convert shapefile labeling scheme into segment index labels
+    '''
     my_map = MapOverlay(map_fn)
     segs = np.load(segs_fn).astype('int')
     my_map.newMask(shape_fn, 'damage')
@@ -17,6 +20,9 @@ def convert_shapefile_to_indcs(shape_fn, map_fn, segs_fn, thresh = 0.5):
 
 
 def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
+    '''
+        Returns 1-003-002 and 1-003-002 as map objects with relevant segmentations and damage labeling
+    ''' 
     #Generate Maps
     map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
     map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
@@ -31,17 +37,10 @@ def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
     map_test.new_seg_mask(np.loadtxt('damagelabels50/{}-3-3.csv'.format(label_name), delimiter = ','), base_seg, 'damage')
     return map_train, map_test
 
-def test( label_name = "Jared"):
-    #Generate Maps
-    map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
-    #Add Segmentations
-    #map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-50.shp',50)
-    #plt.imshow(map_train.mask_segments_by_indx(np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ','), 50, with_img = True))
-    map_train.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
-    plt.imshow(map_train.maskImg('damage'))
-    plt.show()
-
 def haiti_setup(segs = [50], base_seg = 20, label_name = "Jared"):
+    '''
+        Returns haiti map object with relevant segmentations and damage labeling
+    ''' 
     haiti_map = MapOverlay('haiti/haiti_1002003.tif')
     haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(base_seg), base_seg)
     for seg in segs:
@@ -113,8 +112,9 @@ class MapOverlay:
         return (xOffset, yOffset)
 
     
-    def _projectShape(self, shape_fn, mask_name, proj = 4326):
+    def _projectShape(self, shape_fn, mask_name):
         '''
+        PRVIATE METHOD
         INPUT: 
             -shape_fn:  (string) Shape filename to be reprojected
             -mask_name: (string) Custom name to associate with newly projected shape file
@@ -135,8 +135,6 @@ class MapOverlay:
         coordTrans = osr.CoordinateTransformation(in_lyr.GetSpatialRef(), targetSR)
         outfile = 'cache\{}.shp'.format(mask_name)
         outDataSet = driver.CreateDataSource(outfile)
-        dest_srs = osr.SpatialReference()
-        dest_srs.ImportFromEPSG(4326)
         outLayer = outDataSet.CreateLayer(mask_name, targetSR, geom_type=ogr.wkbMultiPolygon)
         inLayerDefn = in_lyr.GetLayerDefn()
         fid_fd = ogr.FieldDefn('FID', ogr.OFTReal)
@@ -215,6 +213,9 @@ class MapOverlay:
 
 
     def newPxMask(self, mask, mask_name):
+        '''
+            adds boolean mask in shape of image to masks with associated name
+        '''
         h,w,c = self.img.shape
         self.masks[mask_name] = mask.ravel()
 
@@ -227,8 +228,11 @@ class MapOverlay:
         self.newPxMask((old_mask1+old_mask2 > 0), new)
     
 
-    def rasterize_shp(self, shape_fn, mask_name, proj = 4326):
-        dataSource, targetSR =  self._projectShape(shape_fn, mask_name, proj)
+    def rasterize_shp(self, shape_fn, mask_name):
+        '''
+            Creates index raster in the shape of the base image from shapefile segmentation
+        '''
+        dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
         layer = dataSource.GetLayer()
         lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
         maxx, miny = self.latlonToPx(lat_min,lon_max)
@@ -242,12 +246,12 @@ class MapOverlay:
         dst_ds.SetGeoTransform(geotransform)
         padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
         gdal.RasterizeLayer(dst_ds, [1], layer, options = ['ATTRIBUTE=FID'])
-        mask = np.pad(dst_ds.GetRasterBand(1).ReadAsArray(), padding, mode = 'constant', constant_values = 0)
+        mask = np.pad(dst_ds.GetRasterBand(1).ReadAsArray(), padding, mode = 'edge')
         mask = np.fliplr(mask)
         dataSource.Destroy()
         return mask
 
-    def newMask(self, shape_fn, mask_name, proj = 4326):
+    def newMask(self, shape_fn, mask_name):
         ''' 
         INPUT: 
             -shape_fn:  (string) Shape filename to be reprojected
@@ -256,10 +260,10 @@ class MapOverlay:
                  Where the shapes cover and '0' in all other locations.
                  Additionally adds the mask to the map dictionary
         '''
-        mask = self.rasterize_shp(shape_fn, mask_name, proj)>0
+        mask = self.rasterize_shp(shape_fn, mask_name)>0
         self.masks[mask_name] = mask.ravel()
 
-    def new_segmentation(self, shape_fn, level, mask_name = 'segments', proj = 4326, save = True):
+    def new_segmentation(self, shape_fn, level, mask_name = 'segments', save = True):
 
         name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
         p = os.path.join('processed_segments', "{}.npy".format(name))
@@ -267,7 +271,7 @@ class MapOverlay:
         if os.path.exists(p) and save:
             self.segmentations[level] =  (name,np.load(p))
         else:
-            mask = self.rasterize_shp(shape_fn, mask_name, proj)
+            mask = self.rasterize_shp(shape_fn, mask_name)
             self.segmentations[level] = (name,mask)
             if save:
                 np.save(p, mask)
