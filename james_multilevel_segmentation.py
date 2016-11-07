@@ -16,7 +16,7 @@ def segment_conversion(small, big):
 
 def main(j):
     print 'here'
-    for i in range(10,1010, 10):
+    for i in range(100,110, 10):
         time1 = datetime.datetime.now()
         print time1
         maps[j].new_segmentation('segmentations/withfeatures{}/shapefilewithfeatures003-00{}-{}.shp'.format(j+2, j+2, i), i)
@@ -25,5 +25,6 @@ def main(j):
 
 maps = [MapOverlay('datafromjoe/1-0003-0002.tif'),MapOverlay('datafromjoe/1-0003-0003.tif')]
 if __name__ == '__main__':
-    Parallel(n_jobs=16)(delayed(main)(i) for i in range(2))
+    main(0)
+    #Parallel(n_jobs=16)(delayed(main)(i) for i in range(2))
  
