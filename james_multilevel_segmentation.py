@@ -2,6 +2,8 @@ import map_overlay
 from map_overlay import MapOverlay
 import numpy as np
 import cv2
+import sklearn
+from sklearn.externals.joblib import Parallel, delayed
 import datetime
 
 
