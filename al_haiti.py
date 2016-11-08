@@ -12,7 +12,7 @@ from labeler import Labelers
 import cv2
 
 class al:    
-    def __init__(self, postfix = '', random = True, update = 'majority', unique_email = None, show = False):
+    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = False):
         self.set_params()
         self.show            = show
         self.unique_email    = unique_email
@@ -53,7 +53,7 @@ class al:
         for i in range(2):
             sub_samp = np.where(y_train==i)[0]
             indices = np.random.choice(sub_samp, self.start_n//2, replace = False)
-            self.labelers.donmez_vote(indices, .75, True)
+            self.labelers.donmez_vote(indices, .85, True)
             training_labels[indices] = i
         return training_labels
 
@@ -109,7 +109,7 @@ class al:
 
     def update_labels(self, new_training):
         if self.update_type == "donmez":
-            new_labs = self.labelers.donmez_vote(self.train_segs[new_training], 0.75, True)
+            new_labs = self.labelers.donmez_vote(self.train_segs[new_training], 0.85, True)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs.npy'.format(self.path), np.array(self.UIs))
         elif self.update_type == "majority":
@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = '_majority_random_{}'.format(i))
+    next_al = al(postfix = '_donmez_rf_{}'.format(i))
     next_al.run()
 
 if __name__ == '__main__':
