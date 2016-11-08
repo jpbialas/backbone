@@ -12,7 +12,7 @@ from labeler import Labelers
 import cv2
 
 class al:    
-    def __init__(self, postfix = '', random = False, update = 'majority', unique_email = None, show = False):
+    def __init__(self, postfix = '', random = True, update = 'majority', unique_email = None, show = False):
         self.set_params()
         self.show            = show
         self.unique_email    = unique_email
@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = '_majority_rf_{}'.format(i))
+    next_al = al(postfix = '_majority_random_{}'.format(i))
     next_al.run()
 
 if __name__ == '__main__':
