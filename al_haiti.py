@@ -17,7 +17,7 @@ class al:
         self.show            = show
         self.unique_email    = unique_email
         self.update_type     = update
-        self.postfix         = postfix + '_rf' if not random else postfix + '_random'
+        self.postfix         = postfix #+ '_rf' if not random else postfix + '_random'
         self.uncertainty     = self.rf_uncertainty if not random else self.random_uncertainty
         self.setup_map_split()
         self.labelers        = Labelers()
@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = '_majority_{}'.format(i%(n_runs/2)))
+    next_al = al(postfix = '_majority_rf_{}'.format(i))
     next_al.run()
 
 if __name__ == '__main__':
