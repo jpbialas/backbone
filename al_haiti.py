@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = 'majority_{}'.format(i%(n_runs/2)))
+    next_al = al(postfix = '_majority_{}'.format(i%(n_runs/2)))
     next_al.run()
 
 if __name__ == '__main__':
