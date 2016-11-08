@@ -27,7 +27,7 @@ class al:
     def set_params(self):
         self.start_n    = 50
         self.batch_size = 50
-        self.updates    = 200
+        self.updates    = 1800
         self.verbose    = 1
         self.TPR        = .95
         self.path       = 'al/'
