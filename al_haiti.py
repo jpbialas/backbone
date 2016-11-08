@@ -111,7 +111,7 @@ class al:
         if self.update_type == "donmez":
             new_labs = self.labelers.donmez_vote(self.train_segs[new_training], 0.85, True)
             self.UIs.append(self.labelers.UI())
-            np.save('{}UIs.npy'.format(self.path), np.array(self.UIs))
+            np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
             new_labs = self.labelers.majority_vote(self.train_segs[new_training])
         else:
