@@ -239,9 +239,9 @@ class MapOverlay:
         minx, maxy = self.latlonToPx(lat_max,lon_min)
         nrows, ncols = min(maxy-miny, self.rows), min(maxx-minx, self.cols)
         minx, miny, maxx, maxy = max(0, minx), max(0, miny), min(maxx, self.cols), min(maxy, self.rows)
-        xres=(lat_max-lat_min)/float(maxx-minx)
-        yres=(lon_max-lon_min)/float(maxy-miny)
-        geotransform=(lat_min,xres,0,lon_max,0, -yres)
+        xres = (lat_max-lat_min)/float(maxx-minx)
+        yres = (lon_max-lon_min)/float(maxy-miny)
+        geotransform =(lat_min,xres,0,lon_max,0, -yres)
         dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Int32)
         dst_ds.SetGeoTransform(geotransform)
         padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image

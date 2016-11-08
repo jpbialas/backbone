@@ -102,7 +102,9 @@ class Labelers:
         return majority_vote
 
 
-    def majority_vote(self, label_indices):
+    def majority_vote(self, label_indices = None):
+        if label_indices == None:
+            label_indices = np.arange(self.n)
         return np.sum(self.labels[:,label_indices], axis = 0)/float(self.labels.shape[0])>=0.5
 
 

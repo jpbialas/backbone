@@ -12,38 +12,49 @@ from labeler import Labelers
 import cv2
 
 class al:    
-    def __init__(self, postfix = '', random = False, show = False):
-        self.start_n = 50
-        self.batch_size = 50
-        self.updates = 200
-        self.verbose = 1
-        self.TPR = .95
-        self.path = 'al/'
-        self.show = show
-        self.postfix = postfix + '_rf' if not random else postfix+'_random'
-        self.train = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
-        self.test = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
-        self.uncertainty = self.rf_uncertainty if not random else self.random_uncertainty
-        self.update_labels = self.donmez_update#self.simple_update
-        self.haiti_map = map_overlay.haiti_setup()
-        segs = self.haiti_map.segmentations[20][1].ravel().astype('int')
-        segs = segs.reshape(self.haiti_map.shape2d)
-        self.train_segs = np.unique(segs[self.train]).astype(int)
-        self.test_segs = np.unique(segs[self.test]).astype(int)
-        model = ObjectClassifier(verbose = 0)
-        X, _ = model._get_X_y(self.haiti_map, 'damage', custom_labels = np.array([]))
-        self.X_train, self.X_test = X[self.train_segs], X[self.test_segs]
-        self.labelers = Labelers()
-        self.fprs = []
-        self.training_labels = self._gen_training_labels(self.labelers.labeler('jaredsfrank@gmail.com'))
+    def __init__(self, postfix = '', random = False, update = 'majority', unique_email = None, show = False):
+        self.set_params()
+        self.show            = show
+        self.unique_email    = unique_email
+        self.update_type     = update
+        self.postfix         = postfix + '_rf' if not random else postfix + '_random'
+        self.uncertainty     = self.rf_uncertainty if not random else self.random_uncertainty
+        self.setup_map_split()
+        self.labelers        = Labelers()
+        self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_segs])
         self.test_progress()
+
+    def set_params(self):
+        self.start_n    = 50
+        self.batch_size = 50
+        self.updates    = 200
+        self.verbose    = 1
+        self.TPR        = .95
+        self.path       = 'al/'
+        self.fprs       = []
+        self.UIs        = []
+
+    def setup_map_split(self):
+        self.train      = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+        self.test       = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
+        self.haiti_map  = map_overlay.haiti_setup()
+        self.segs       = self.haiti_map.segmentations[20][1].astype('int')
+        self.train_segs = np.unique(self.segs[self.train]).astype(int)
+        self.test_segs  = np.unique(self.segs[self.test]).astype(int)
+        model           = ObjectClassifier(verbose = 0)
+        X               = model.get_X(self.haiti_map)
+        self.X_train    = X[self.train_segs]
+        self.X_test     = X[self.test_segs]
+
 
     def _gen_training_labels(self, y_train):
         training_labels = np.ones_like(self.train_segs)*-1
         np.random.seed()
         for i in range(2):
-            sub_samp = np.where(y_train[self.train_segs]==i)[0]
-            training_labels[np.random.choice(sub_samp, self.start_n//2, replace = False)] = i
+            sub_samp = np.where(y_train==i)[0]
+            indices = np.random.choice(sub_samp, self.start_n//2, replace = False)
+            self.labelers.donmez_vote(indices, .75, True)
+            training_labels[indices] = i
         return training_labels
 
 
@@ -64,8 +75,7 @@ class al:
     def show_selected(self):
         lab_train_indcs = np.where(self.training_labels != -1)[0]
         lab_indcs = self.train_segs[lab_train_indcs]
-        img = self.haiti_map.mask_segments_by_indx(lab_indcs,\
-                                     20, opacity = 1, with_img = True)
+        img = self.haiti_map.mask_segments_by_indx(lab_indcs, 20, 1, True)
         img = cv2.cvtColor(img[self.train], cv2.COLOR_BGR2RGB)
         n_labeled = np.where(self.training_labels != -1)[0].shape[0]
         cv2.imwrite('{}selected_{}{}.png'.format(self.path, n_labeled,\
@@ -73,13 +83,11 @@ class al:
 
 
     def rf_uncertainty(self):
-        thresh = .5
+        thresh = .06
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
-        model.fit(self.haiti_map, custom_data = self.X_train[training_sample],\
-                  custom_labels=self.training_labels[training_sample])
-        proba_segs = model.predict_proba_segs(self.haiti_map, \
-                                            custom_data = self.X_train)
+        model.fit(self.haiti_map, self.training_labels[training_sample], self.X_train[training_sample])
+        proba_segs = model.predict_proba_segs(self.haiti_map, self.X_train)
         if self.show:
             self.show_selected()
             fig = plt.figure()
@@ -99,28 +107,25 @@ class al:
         return np.random.permutation(np.where(self.training_labels == -1)[0])
 
 
-    def simple_update(self, new_training):
-        self.training_labels[new_training] = self.labelers.labeler('jaredsfrank@gmail.com')[self.train_segs[new_training]]
-
-    def majority_vote(self, new_training):
-        self.training_labels[new_training] = self.labelers.majority_vote(self.train_segs[new_training])
-
-    def donmez_update(self, new_training):
-        self.training_labels[new_training] = self.labelers.donmez_vote(self.train_segs[new_training], 0.75, True)
-        print self.labelers.rewards
-        print self.labelers.UI()
+    def update_labels(self, new_training):
+        if self.update_type == "donmez":
+            new_labs = self.labelers.donmez_vote(self.train_segs[new_training], 0.75, True)
+            self.UIs.append(self.labelers.UI())
+            np.save('{}UIs.npy'.format(self.path), np.array(self.UIs))
+        elif self.update_type == "majority":
+            new_labs = self.labelers.majority_vote(self.train_segs[new_training])
+        else:
+            new_labs = self.labelers.labeler(self.unique_email)[self.train_segs[new_training]]
+        self.training_labels[new_training] = new_labs
 
 
     def test_progress(self):
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
-        model.fit(self.haiti_map, custom_data = self.X_train[training_sample],\
-                  custom_labels=self.training_labels[training_sample])
-        seg_map = self.haiti_map.segmentations[20][1].astype('int')[self.test]
-        proba_segs = model.predict_proba_segs(self.haiti_map, \
-                                              custom_data = self.X_test)
-        proba = self.partial_segs_to_full(proba_segs, self.test_segs)[seg_map]
-        g_truth = self.haiti_map.masks['damage'].reshape(4096,4096)[self.test]
+        model.fit(self.haiti_map, self.training_labels[training_sample], self.X_train[training_sample])
+        proba_segs = model.predict_proba_segs(self.haiti_map, self.X_test)
+        proba = self.partial_segs_to_full(proba_segs, self.test_segs)[self.segs][self.test]
+        g_truth = self.labelers.majority_vote()[self.segs][self.test]
         n_labeled = np.where(self.training_labels != -1)[0].shape[0]
         if self.show:
             fig, AUC = analyze_results.ROC(self.haiti_map, g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
@@ -128,7 +133,7 @@ class al:
             plt.close(fig)
         FPR = analyze_results.FPR_from_FNR(g_truth.ravel(), proba.ravel(), TPR = self.TPR)
         self.fprs.append(FPR)
-        np.savetxt('{}fprs{}.csv'.format(self.path, self.postfix), self.fprs, delimiter = ',', fmt = '%1.4f')
+        np.save('{}fprs{}.npy'.format(self.path, self.postfix), self.fprs)
 
 
     def update(self):
@@ -141,11 +146,14 @@ class al:
         for i in range(self.updates):
             self.update()
 
+
+
 def run_al(i, n_runs):
-    next_al = al(postfix = '_{}'.format(i%(n_runs/2)), random = i<n_runs/2)
+    next_al = al(postfix = 'majority_{}'.format(i%(n_runs/2)))
     next_al.run()
 
 if __name__ == '__main__':
-    '''n_runs = 2
-    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))'''
-    al().run()
+    n_runs = 16
+    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))
+    #a = al()
+    #a.run()
