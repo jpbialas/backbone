@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from object_model import ObjectClassifier
 from px_model import PxClassifier
-from map_overlay import MapOverlay
+from map_overlay import Geo_Map
 import map_overlay
 from mpl_toolkits.mplot3d import Axes3D
 from tsne import tsne
@@ -47,7 +47,7 @@ def get_samples(img_num, n, label, load = True):
         ans = np.loadtxt('temp/cached_{}.csv'.format(img_num), delimiter = ',')
         print('done loading')
     else:
-        next_map = MapOverlay('datafromjoe/1-0003-000{}.tif'.format(img_num))
+        next_map = Geo_Map('datafromjoe/1-0003-000{}.tif'.format(img_num))
         next_map.newMask('datafromjoe/1-003-00{}-damage.shp'.format(img_num),'damage')
         all_damage = np.where(next_map.getLabels('damage') == 1)[0]
 

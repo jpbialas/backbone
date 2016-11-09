@@ -1,4 +1,3 @@
-from map_overlay import MapOverlay
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve
@@ -102,46 +101,6 @@ def compare_heatmaps(pred1, pred2):
     plt.subplot2grid((2,2),(1,0), colspan = 2),plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
     plt.title('Difference'), plt.xticks([]), plt.yticks([])
     
-
-def test_thresholds():
-    print("loading")
-    my_map = MapOverlay('datafromjoe/1-0003-0002.tif')
-    my_map.newMask('datafromjoe/1-003-002-damage.shp', 'damage')
-    predict_2 = np.loadtxt('temp/predictions.csv', delimiter = ',')
-    labels = my_map.getLabels('damage')
-    base_p, base_r, base_a, base_f =  prec_recall(labels, predict_2.ravel())
-    predictions = np.loadtxt('temp/segments_100.csv', delimiter = ',')
-    print("done loading")
-    results = [[],[],[],[]]
-    rate = 0.05
-    for i in range(int(1/rate)):
-        p,r,a,f = prec_recall(labels, predictions.ravel(), i*rate)
-        results[0].append(p)
-        results[1].append(r)
-        results[2].append(a)
-        results[3].append(f)
-        print(i*rate, p, r, a ,f)
-    fig = plt.figure("Threshold's Effect on F1")
-    fig.suptitle("Threshold's Effect on F1", fontsize=14)
-    ax = fig.add_subplot(111)
-
-    t = np.arange(0,1,rate)
-    ax.set_xlabel('Threshold (%)')
-    ax.set_ylabel('Percentage (%)')
-    precision = ax.plot(t, results[0], 'r-', label = 'Precision')
-    recall = ax.plot(t, results[1], 'b-', label = 'Recall')
-    #acc = ax.plot(t, results[2], 'g--', label = 'Accuracy')
-    f1 =  ax.plot(t, results[3], 'y-', label = 'F1')
-    base_p_graph = ax.plot(t, np.ones_like(t)*base_p, 'r--', label = 'Precision Compare')
-    base_p_graph = ax.plot(t, np.ones_like(t)*base_r, 'b--', label = 'Recall Compare')
-    base_p_graph = ax.plot(t, np.ones_like(t)*base_f, 'y--', label = 'F1 Compare')
-
-    
-    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-       ncol=6, mode="expand", borderaxespad=0.)
-    plt.show()
-
-#test_thresholds()
 
 def side_by_side(myMap, mask_true, mask_predict, name, save = False):
     fig = plt.figure('SBS_{}'.format(name))

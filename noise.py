@@ -1,4 +1,3 @@
-from map_overlay import MapOverlay
 import map_overlay
 import seg_classify as sc
 import numpy as np

@@ -2,7 +2,6 @@ from object_model import ObjectClassifier
 from px_model import PxClassifier
 import analyze_results
 import map_overlay
-from map_overlay import MapOverlay
 import matplotlib.pyplot as plt
 import timeit
 import numpy as np

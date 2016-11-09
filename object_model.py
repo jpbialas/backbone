@@ -1,4 +1,3 @@
-from map_overlay import MapOverlay
 import map_overlay
 import numpy as np
 import cv2

@@ -24,8 +24,8 @@ def basic_setup(segs = [100], base_seg = 50, label_name = "Jared"):
         Returns 1-003-002 and 1-003-002 as map objects with relevant segmentations and damage labeling
     ''' 
     #Generate Maps
-    map_train = MapOverlay('datafromjoe/1-0003-0002.tif')
-    map_test = MapOverlay('datafromjoe/1-0003-0003.tif')
+    map_train = Geo_Map('datafromjoe/1-0003-0002.tif')
+    map_test = Geo_Map('datafromjoe/1-0003-0003.tif')
     #Add Segmentations
     map_train.new_segmentation('segmentations/withfeatures2/shapefilewithfeatures003-002-{}.shp'.format(base_seg), base_seg)
     map_test.new_segmentation('segmentations/withfeatures3/shapefilewithfeatures003-003-{}.shp'.format(base_seg), base_seg)
@@ -41,7 +41,7 @@ def haiti_setup(segs = [50], base_seg = 20, label_name = "Jared"):
     '''
         Returns haiti map object with relevant segmentations and damage labeling
     ''' 
-    haiti_map = MapOverlay('haiti/haiti_1002003.tif')
+    haiti_map = Geo_Map('haiti/haiti_1002003.tif')
     haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(base_seg), base_seg)
     for seg in segs:
         haiti_map.new_segmentation('segmentations/haiti/segment-{}.shp'.format(seg), seg)
@@ -50,7 +50,7 @@ def haiti_setup(segs = [50], base_seg = 20, label_name = "Jared"):
     return haiti_map
 
 
-class MapOverlay:
+class Px_Map:
 
     '''
     INPUT: 
@@ -58,26 +58,23 @@ class MapOverlay:
     RESULT: 
         - Instantiates object with stored constants applicable to input map
     '''
-    def __init__(self, map_fn):
-        self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
-        driver = gdal.GetDriverByName('HFA')
-        driver.Register()
-        ds = gdal.Open(map_fn, 0)
-        if ds is None:
-            print('Could not open ' + map_fn)
-            sys.exit(1)
-        self.map_ds = ds
-        self.cols, self.rows, self.bands = ds.RasterXSize, ds.RasterYSize, ds.RasterCount
-        self.originX, self.originY = geotransform[0], geotransform[3]
-        self.pixelWidth, self.pixelHeight = geotransform[1], geotransform[5]
-        geotransform = ds.GetGeoTransform()
-        self.map_fn = map_fn
-        self.img = cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB)
+    def __init__(self, img):
+        self.rows, self.cols, self.bands = img.shape
+        self.img = img
         self.masks = {}
         self.segmentations = {}
         self.shape = self.img.shape
-        self.bw_img = cv2.imread(map_fn, 0)
+        self.bw_img = cv2.cvtColor(self.img, cv2.COLOR_RGB2GRAY)
 
+
+    def sub_map(self, ix):
+        f = lambda x: x.reshape((self.rows, self.cols))[ix]
+        g = lambda x: (x[0], f(x[1]))
+        sub_img = self.img[ix]
+        sub_map = Px_Map(sub_img)
+        sub_map.masks = {k: f(v).ravel() for k, v in self.masks.items()}
+        sub_map.segmentations = {k: g(v) for k, v in self.segmentations.items()}
+        return sub_map
 
     
     def getMapData(self):
@@ -99,7 +96,6 @@ class MapOverlay:
         return self.masks[mask_name]
 
     
-
     def mask_helper(self, img, mask, opacity = 0.4):
         h,w,c = img.shape
         adj_mask = np.logical_not(mask).reshape(h,w,1)
@@ -161,29 +157,38 @@ class MapOverlay:
         self.newPxMask((old_mask1+old_mask2 > 0), new)
 
 
-    def newMask(self, shape_fn, mask_name):
-        ''' 
-        INPUT: 
-            -shape_fn:  (string) Shape filename to be reprojected
-            -mask_name: (string )Custom name to associate with newly projected shape file
-        RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
-                 Where the shapes cover and '0' in all other locations.
-                 Additionally adds the mask to the map dictionary
-        '''
-        mask = self.rasterize_shp(shape_fn, mask_name)>0
-        self.masks[mask_name] = mask.ravel()
+    def new_seg_raster(self, raster, level):
+        assert(raster.shape == (self.rows, self.cols))
+        self.segmentations[level] = (name,raster)
+
+
+class Geo_Map(Px_Map):
+
+    def __init__(self, map_fn):
+        self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
+        driver = gdal.GetDriverByName('HFA')
+        driver.Register()
+        ds = gdal.Open(map_fn, 0)
+        if ds is None:
+            print('Could not open ' + map_fn)
+            sys.exit(1)
+        self.map_ds = ds
+        geotransform = ds.GetGeoTransform()
+        self.originX, self.originY = geotransform[0], geotransform[3]
+        self.pixelWidth, self.pixelHeight = geotransform[1], geotransform[5]
+        self.map_fn = map_fn
+        Px_Map.__init__(self, cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB))
+        self.cols, self.rows, self.bands = ds.RasterXSize, ds.RasterYSize, ds.RasterCount
 
 
     def new_segmentation(self, shape_fn, level, mask_name = 'segments', save = True):
-
         name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
         p = os.path.join('processed_segments', "{}.npy".format(name))
-        #self.segment_name = name
         if os.path.exists(p) and save:
             self.segmentations[level] =  (name,np.load(p))
         else:
             mask = self.rasterize_shp(shape_fn, mask_name)
-            self.segmentations[level] = (name,mask)
+            self.new_seg_raster(mask, level)
             if save:
                 np.save(p, mask)
     
@@ -279,7 +284,6 @@ class MapOverlay:
         dataSource.Destroy()
         return mask
 
-    
 
 if __name__ == '__main__':
-    haiti_setup()
+    haiti_map = haiti_setup()
