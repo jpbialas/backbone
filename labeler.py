@@ -102,10 +102,13 @@ class Labelers:
         return majority_vote
 
 
-    def majority_vote(self, label_indices = None):
-        if label_indices == None:
+    def majority_vote(self, label_indices = None, labeler_indices = None):
+        if label_indices is None:
             label_indices = np.arange(self.n)
-        return np.sum(self.labels[:,label_indices], axis = 0)/float(self.labels.shape[0])>=0.5
+        if labeler_indices is None:
+            labeler_indices = np.arange(self.labels.shape[0])
+        indcs = np.ix_(labeler_indices, label_indices)
+        return np.sum(self.labels[indcs], axis = 0)/float(labeler_indices.shape[0])>=0.5
 
 
     def individual_vote(self, label_indices):
@@ -141,9 +144,10 @@ class Labelers:
 
 
     def get_FPR_TPR(self):
-        probs = np.sum(self.labels, axis = 0).astype('float')/float(len(self.user_map))
-        TPR = np.sum(self.labels*probs, axis = 1)/np.sum(probs)
-        FPR = np.sum(self.labels*(1-probs), axis = 1)/np.sum(1-probs)
+        relevant_labels = self.labels[:, 97710/3:97710/2*3]
+        probs = np.sum(relevant_labels, axis = 0).astype('float')/float(len(self.user_map))
+        TPR = np.sum(relevant_labels*probs, axis = 1)/np.sum(probs)
+        FPR = np.sum(relevant_labels*(1-probs), axis = 1)/np.sum(1-probs)
         fig, ax = plt.subplots()
         ax.scatter(FPR, TPR)
         names = self.emails
@@ -178,10 +182,10 @@ def test():
     #print labelers.emails
     #print labelers.donmez_vote(np.arange(labelers.n), 0.5, False)
     #print labelers.UI()
-    labelers.donmez_vote(np.arange(labelers.n), 0.5, True)
-    print labelers.UI()
-    print labelers.emails
-    labelers.donmez_vote(np.arange(labelers.n), 0.75, True)
+    labelers.donmez_vote(np.arange(labelers.n/3, labelers.n), 0.5, True)
+
+    print zip(labelers.emails, labelers.UI())
+    '''labelers.donmez_vote(np.arange(labelers.n), 0.75, True)
     print labelers.UI()
     print labelers.rewards
     haiti_map = map_overlay.haiti_setup()
@@ -190,7 +194,7 @@ def test():
     labelers.show_labeler('jaredsfrank@gmail.com', haiti_map)
     labelers.show_labeler('dk72mi@gmail.com', haiti_map)
     labelers.get_FPR_TPR()
-    plt.show()
+    plt.show()'''
    
 
 if __name__ == '__main__':

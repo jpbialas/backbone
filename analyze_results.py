@@ -171,10 +171,11 @@ def average_class_prob(map_test, ground_truth, full_predict, name):
 
 
 def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
+    print 'here', ground_truth.shape, full_predict.shape
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
     min_i = 0
     max_i = TPRs.shape[0]
-    while max_i-min_i > 1:
+    while max_i-min_i >= 1:
         test_i = np.floor((max_i+min_i)/2)
         test = TPRs[test_i]
         if test == TPR:
@@ -191,6 +192,8 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
     #print 'threshold is', thresh
     #precision = metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
     FPR = FPRs[min_i]
+    print FPRs[min_i], FPRs[min_i+1], FPRs[min_i-1], FPRs[min_i+2]
+    print TPRs[min_i], TPRs[min_i+1], TPRs[min_i-1], TPRs[min_i+2]
     return FPR
 
 
@@ -201,7 +204,7 @@ def ROC(map_test, ground_truth, full_predict, name, save = False):
 
     fig = plt.figure('{} ROC {}'.format(name,map_test.name[-1]))
     AUC = sklearn.metrics.roc_auc_score(ground_truth, full_predict.ravel())
-    plt.plot(FPRs, TPRs)
+    plt.scatter(FPRs, TPRs)
     plt.title('ROC Curve (AUC = {})'.format(round(AUC, 5)))
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')

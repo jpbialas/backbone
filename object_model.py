@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 import seg_features as sf
 import matplotlib.pyplot as plt
 import analyze_results
-import crowdsource
+from labeler import Labelers
 import sklearn
 from convenience_tools import *
 from sklearn.externals.joblib import Parallel, delayed
@@ -109,29 +109,25 @@ class ObjectClassifier():
 
 
 def main_haiti():
+    y = Labelers().majority_vote()
+    y2 = Labelers().majority_vote(labeler_indices = np.array([0,2]))
     p_thresh = .06
     haiti_map = map_overlay.haiti_setup()
     model = ObjectClassifier()
-    X = model.get_X(haiti_map) 
-    y = np.loadtxt('damagelabels20/Jared.csv', delimiter = ',')
+    X = model.get_X(haiti_map)
+    train = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+    test = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
     segs = haiti_map.segmentations[20][1].astype('int')
-    left = np.unique(segs.reshape(haiti_map.shape2d)[4096/3:,:4096/2]).astype(int)
-    right = np.unique(segs.reshape(haiti_map.shape2d)[4096/3:,4096/2:4096]).astype(int)
-
-
-    model.fit(haiti_map, y[left], X[left])
-    #model.feature_importance()
-    proba = model.predict_proba(haiti_map, y, X)
-    g_truth = haiti_map.masks['damage'].reshape(4096,4096)
-    analyze_results.ROC(haiti_map, g_truth[4096/3:,4096/2:4096].ravel(), proba[4096/3:,4096/2:4096].ravel(), 'Haiti Right')
-    print analyze_results.FPR_from_FNR(g_truth[4096/3:,4096/2:4096].ravel(), proba[4096/3:,4096/2:4096].ravel())
-    #analyze_results.probability_heat_map(haiti_map, proba, 'Haiti Right', save = False)
-    fig = plt.figure()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, proba.reshape(4096,4096)>p_thresh)[4096/3:,4096/2:4096,:])
-    plt.contour(g_truth.reshape(haiti_map.rows, haiti_map.cols)[4096/3:,4096/2:4096], colors = 'green')
-    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-    plt.xticks([]), plt.yticks([])
-
+    train_segs = np.unique(segs[train]).astype(int)
+    test_segs  = np.unique(segs[test]).astype(int)
+    print test_segs.shape
+    print train_segs.shape
+    model.fit(haiti_map, y2[train_segs], X[train_segs])
+    probs = model.predict_proba(haiti_map)
+    g_truth = y[segs][test].ravel()
+    proba = probs.reshape(4096,4096)[test].ravel()
+    print analyze_results.FPR_from_FNR(y[segs][test].ravel(), probs.reshape(4096,4096)[test].ravel(), TPR = .95)
+    analyze_results.ROC(haiti_map, g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
     plt.show()
 
 if __name__ == '__main__':

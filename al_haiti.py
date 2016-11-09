@@ -27,7 +27,7 @@ class al:
     def set_params(self):
         self.start_n    = 50
         self.batch_size = 50
-        self.updates    = 1800
+        self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
         self.path       = 'al/'
@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = '_donmez_rf_{}'.format(i))
+    next_al = al(postfix = '_donmez_2_rf_{}'.format(i))
     next_al.run()
 
 if __name__ == '__main__':
