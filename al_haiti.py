@@ -149,7 +149,7 @@ class al:
 
 
 def run_al(i, n_runs):
-    next_al = al(postfix = '_donmez_2_rf_{}'.format(i))
+    next_al = al(postfix = '_donmez_3_rf_{}'.format(i))
     next_al.run()
 
 if __name__ == '__main__':
