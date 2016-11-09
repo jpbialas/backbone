@@ -59,8 +59,6 @@ class MapOverlay:
         - Instantiates object with stored constants applicable to input map
     '''
     def __init__(self, map_fn):
-        self.masks = {}
-        self.segmentations = {}
         self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
         driver = gdal.GetDriverByName('HFA')
         driver.Register()
@@ -69,15 +67,17 @@ class MapOverlay:
             print('Could not open ' + map_fn)
             sys.exit(1)
         self.map_ds = ds
-        geotransform = ds.GetGeoTransform()
-        self.map_fn = map_fn
-        self.img = cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB)
-        self.shape = self.img.shape
-        self.shape2d = self.img.shape[:2]
-        self.bw_img = cv2.imread(map_fn, 0)
         self.cols, self.rows, self.bands = ds.RasterXSize, ds.RasterYSize, ds.RasterCount
         self.originX, self.originY = geotransform[0], geotransform[3]
         self.pixelWidth, self.pixelHeight = geotransform[1], geotransform[5]
+        geotransform = ds.GetGeoTransform()
+        self.map_fn = map_fn
+        self.img = cv2.cvtColor(cv2.imread(map_fn), cv2.COLOR_BGR2RGB)
+        self.masks = {}
+        self.segmentations = {}
+        self.shape = self.img.shape
+        self.bw_img = cv2.imread(map_fn, 0)
+
 
     
     def getMapData(self):
@@ -99,6 +99,95 @@ class MapOverlay:
         return self.masks[mask_name]
 
     
+
+    def mask_helper(self, img, mask, opacity = 0.4):
+        h,w,c = img.shape
+        adj_mask = np.logical_not(mask).reshape(h,w,1)
+        gap_image = img*adj_mask
+        red_mask = ([255,0,0]*mask.reshape(h,w,1)).astype('uint8')
+        masked_image = gap_image+red_mask
+        output = img.copy()
+        cv2.addWeighted(masked_image, opacity, output, 1.0-opacity, 0, output)
+        return output
+
+
+    def maskImg(self, mask_name, opacity = 0.4):
+        '''
+        INPUT: 
+            - (string) Name of mask to overlay
+        RESULT: 
+            - Displays base map overlayed with relevant mask shapes
+        '''
+
+        mask = self.masks[mask_name]
+        return self.mask_helper(self.img, mask, opacity)
+
+    def mask_segments(self, i, level, with_img = True, opacity = .4):
+        '''
+            masks_segments based on i, a boolean list indicating labelled segments
+        '''
+        mask = np.in1d(self.segmentations[level][1],np.where(i))
+        return self.mask_helper(self.img, mask, opacity) if with_img else mask
+
+    def mask_segments_by_indx(self, indcs, level,  with_img = True, opacity = .4):
+        '''
+            masks_segments based on indcs, a list of indices
+        '''
+        mask = np.in1d(self.segmentations[level][1],indcs)
+        return self.mask_helper(self.img, mask, opacity) if with_img else mask
+
+
+    def new_seg_mask(self, indcs, level, mask_name):
+        '''
+            generates new mask labelling given only segment index numbers at level @level
+        '''
+        mask = self.mask_segments_by_indx(indcs, level, False)
+        self.masks[mask_name] = mask.ravel()
+
+
+    def newPxMask(self, mask, mask_name):
+        '''
+            adds boolean mask in shape of image to masks with associated name
+        '''
+        h,w,c = self.img.shape
+        self.masks[mask_name] = mask.ravel()
+
+
+    def combine_masks(self, old1, old2, new):
+        old_mask1 = self.masks[old1]
+        old_mask2 = self.masks[old2]
+        del self.masks[old1]
+        del self.masks[old2]
+        self.newPxMask((old_mask1+old_mask2 > 0), new)
+
+
+    def newMask(self, shape_fn, mask_name):
+        ''' 
+        INPUT: 
+            -shape_fn:  (string) Shape filename to be reprojected
+            -mask_name: (string )Custom name to associate with newly projected shape file
+        RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
+                 Where the shapes cover and '0' in all other locations.
+                 Additionally adds the mask to the map dictionary
+        '''
+        mask = self.rasterize_shp(shape_fn, mask_name)>0
+        self.masks[mask_name] = mask.ravel()
+
+
+    def new_segmentation(self, shape_fn, level, mask_name = 'segments', save = True):
+
+        name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
+        p = os.path.join('processed_segments', "{}.npy".format(name))
+        #self.segment_name = name
+        if os.path.exists(p) and save:
+            self.segmentations[level] =  (name,np.load(p))
+        else:
+            mask = self.rasterize_shp(shape_fn, mask_name)
+            self.segmentations[level] = (name,mask)
+            if save:
+                np.save(p, mask)
+    
+
     def latlonToPx(self, x, y):
         '''
         INPUT: 
@@ -167,67 +256,6 @@ class MapOverlay:
             indx+=1
         return outDataSet, targetSR
 
-    def mask_helper(self, img, mask, opacity = 0.4):
-        h,w,c = img.shape
-        adj_mask = np.logical_not(mask).reshape(h,w,1)
-        gap_image = img*adj_mask
-        red_mask = ([255,0,0]*mask.reshape(h,w,1)).astype('uint8')
-        masked_image = gap_image+red_mask
-        output = img.copy()
-        cv2.addWeighted(masked_image, opacity, output, 1.0-opacity, 0, output)
-        return output
-
-
-    def maskImg(self, mask_name, opacity = 0.4):
-        '''
-        INPUT: 
-            - (string) Name of mask to overlay
-        RESULT: 
-            - Displays base map overlayed with relevant mask shapes
-        '''
-
-        mask = self.masks[mask_name]
-        return self.mask_helper(self.img, mask, opacity)
-
-    def mask_segments(self, i, level, with_img = True, opacity = .4):
-        '''
-            masks_segments based on i, a boolean list indicating labelled segments
-        '''
-        mask = np.in1d(self.segmentations[level][1],np.where(i))
-        return self.mask_helper(self.img, mask, opacity) if with_img else mask
-
-    def mask_segments_by_indx(self, indcs, level,  with_img = True, opacity = .4):
-        '''
-            masks_segments based on indcs, a list of indices
-        '''
-        mask = np.in1d(self.segmentations[level][1],indcs)
-        return self.mask_helper(self.img, mask, opacity) if with_img else mask
-
-
-    def new_seg_mask(self, indcs, level, mask_name):
-        '''
-            generates new mask labelling given only segment index numbers at level @level
-        '''
-        mask = self.mask_segments_by_indx(indcs, level, False)
-        self.masks[mask_name] = mask.ravel()
-
-
-    def newPxMask(self, mask, mask_name):
-        '''
-            adds boolean mask in shape of image to masks with associated name
-        '''
-        h,w,c = self.img.shape
-        self.masks[mask_name] = mask.ravel()
-
-
-    def combine_masks(self, old1, old2, new):
-        old_mask1 = self.masks[old1]
-        old_mask2 = self.masks[old2]
-        del self.masks[old1]
-        del self.masks[old2]
-        self.newPxMask((old_mask1+old_mask2 > 0), new)
-    
-
     def rasterize_shp(self, shape_fn, mask_name):
         '''
             Creates index raster in the shape of the base image from shapefile segmentation
@@ -251,30 +279,7 @@ class MapOverlay:
         dataSource.Destroy()
         return mask
 
-    def newMask(self, shape_fn, mask_name):
-        ''' 
-        INPUT: 
-            -shape_fn:  (string) Shape filename to be reprojected
-            -mask_name: (string )Custom name to associate with newly projected shape file
-        RESULT: Generates mask with the dimensions of the base map raster containing '1's in pixels
-                 Where the shapes cover and '0' in all other locations.
-                 Additionally adds the mask to the map dictionary
-        '''
-        mask = self.rasterize_shp(shape_fn, mask_name)>0
-        self.masks[mask_name] = mask.ravel()
-
-    def new_segmentation(self, shape_fn, level, mask_name = 'segments', save = True):
-
-        name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
-        p = os.path.join('processed_segments', "{}.npy".format(name))
-        #self.segment_name = name
-        if os.path.exists(p) and save:
-            self.segmentations[level] =  (name,np.load(p))
-        else:
-            mask = self.rasterize_shp(shape_fn, mask_name)
-            self.segmentations[level] = (name,mask)
-            if save:
-                np.save(p, mask)
+    
 
 if __name__ == '__main__':
     haiti_setup()
