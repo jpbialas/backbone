@@ -34,7 +34,7 @@ class Labelers:
                     self.user_map[email] = len(self.user_map)
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels.csv'
+        fn = 'damagelabels20/labels2.csv'
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
         self.labels = np.zeros((len(self.user_map), self.n))
