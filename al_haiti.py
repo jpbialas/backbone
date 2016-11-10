@@ -13,7 +13,7 @@ from labeler import Labelers
 import cv2
 
 class al:    
-    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = True):
+    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = False):
         self.set_params()
         self.show            = show
         self.unique_email    = unique_email
@@ -32,7 +32,7 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_200/'
+        self.path       = 'al_200_/'
         self.fprs       = []
         self.UIs        = []
 
@@ -150,6 +150,6 @@ def run_al(i, n_runs, random, update):
 
 if __name__ == '__main__':
     print sys.argv[1], sys.argv[2]
-    n_runs = 1
+    n_runs = 16
     Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
     
