@@ -10,7 +10,7 @@ def main(my_map, start = 1, end = 2):
     img_num = my_map.name[-1]
     dims = my_map.rows, my_map.cols
     label_image = my_map.masks['damage'].reshape(dims).astype('uint8')
-    segs = my_map.segmentations[50][1].ravel()
+    segs = my_map.segmentations[50].ravel()
     plt.figure('Labelling')
     plt.imshow(label_image, cmap = 'gray')
     kernel = np.ones((3,3),np.uint8)
@@ -43,7 +43,7 @@ def main2(my_map):
     img_num = my_map.name[-1]
     dims = my_map.rows, my_map.cols
     label_image = my_map.masks['damage'].reshape(dims).astype('uint8')
-    segs = my_map.segmentations[50][1].ravel()
+    segs = my_map.segmentations[50].ravel()
     kernel = np.ones((3,3),np.uint8)
 
     for i in range(0,50):

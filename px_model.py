@@ -80,7 +80,7 @@ class PxClassifier():
     def testing_suite(self, map_test, prediction_prob):
         v_print('generating visuals', self.verbose)
         heat_fig = analyze_results.probability_heat_map(map_test, prediction_prob, self.test_name, save = True)
-        analyze_results.ROC(map_test, map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
+        analyze_results.ROC(map_test.getLabels('damage'), prediction_prob, self.test_name, save = True)
         map_test.newPxMask(prediction_prob.ravel()>.4, 'damage_pred')
         sbs_fig = analyze_results.side_by_side(map_test, 'damage', 'damage_pred', self.test_name, True)
         v_print('done generating visuals', self.verbose)

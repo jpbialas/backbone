@@ -65,13 +65,13 @@ def color_edge(my_map, seg):
             Names of those features
     '''
     names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
-    p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg][0]))
+    p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg]))
     if os.path.exists(p):
         data = np.load(p)
     else:
         edges = cv2.Canny(my_map.img,50,100).reshape((my_map.rows,my_map.cols, 1))
         color_e = np.concatenate((my_map.img, edges), axis = 2).reshape((my_map.rows*my_map.cols, 4))
-        segs = my_map.segmentations[seg][1].ravel()
+        segs = my_map.segmentations[seg].ravel()
         if seg <= 50:
             data = px2seg2(color_e, segs)
         else:
@@ -79,21 +79,7 @@ def color_edge(my_map, seg):
         np.save(p, data)
     return data, names
 
-def haiti_ecog_features(seg):
-    json_file = open('segmentations/haiti/{}-features.json'.format(seg))
-    json_str = json_file.read()
-    #print json_str
 
-    json_data = json.loads(json_str.replace('inf', '0'))
-    n_segs = len(json_data['features'])
-    n_feats = len(json_data['features'][0]['properties'].values())
-
-    data = np.zeros((n_segs, n_feats))
-    json_features = json_data['features']
-    names = json_features[0]['properties'].keys()
-    for i in range(n_segs):
-        data[i] = json_features[i]['properties'].values()
-    return data, names
 
 def ecognition_features(img_num, seg):
     '''
@@ -145,7 +131,7 @@ def hog(my_map, seg):
     names = []
     for i in range(bins):
         names.append('hog{}'.format(i))
-    p = os.path.join('features', "hog_seg_{}.npy".format(my_map.segmentations[seg][0]))
+    p = os.path.join('features', "hog_seg_{}.npy".format(my_map.segmentations[seg]))
     if os.path.exists(p):
         data = np.load(p)
     else:
@@ -155,7 +141,7 @@ def hog(my_map, seg):
         gy = cv2.Sobel(bw_img, cv2.CV_32F, 0, 1)
         mag, ang = cv2.cartToPolar(gx, gy)
         angles = ang/2.0*np.pi*255
-        segs = my_map.segmentations[seg][1].ravel()
+        segs = my_map.segmentations[seg].ravel()
         n_segs = int(np.max(segs))+1
         data = np.zeros((n_segs, 16), dtype = 'uint8')
         for i in pbar(range(n_segs)):
@@ -174,14 +160,14 @@ def shapes(my_map, level):
             Names of those features
     '''
     names = np.array(['re{}'.format(level),'rf{}'.format(level),'ee{}'.format(level),'ef{}'.format(level)])
-    p = os.path.join('features', "aspect_extent_{}.npy".format(my_map.segmentations[level][0]))
+    p = os.path.join('features', "aspect_extent_{}.npy".format(my_map.segmentations[level]))
     if os.path.exists(p):
         data = np.load(p)
         data = np.clip(data, 0, 1)
         np.save(p,data)
     else:
         pbar = custom_progress()
-        segs = my_map.segmentations[level][1]
+        segs = my_map.segmentations[level]
         n_segs = int(np.max(segs))+1
         data = np.zeros((n_segs, 4), dtype = 'float')
         for i in pbar(range(n_segs)):
@@ -224,7 +210,7 @@ def shapes(my_map, level):
     return data, names
     
 
-def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
+def NZ_features(my_map, base_seg, seg_levels, ecognition = True):
     '''
         my_map: map holding the image to extract features from
         base_seg: Segmentation level to find features for
@@ -234,10 +220,10 @@ def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
             All features for each segment and context segments
             Names of those features
     '''
-    '''img = my_map.img
+    img = my_map.img
     img_num = my_map.name[-1]
     h,w,_ = img.shape
-    segs = my_map.segmentations[base_seg][1].ravel().astype('int')
+    segs = my_map.segmentations[base_seg].ravel().astype('int')
     n_segs = int(np.max(segs))
     pbar = custom_progress()
     color_data, color_names = color_edge(my_map, base_seg)
@@ -252,7 +238,7 @@ def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
         names = np.concatenate((shape_names, hog_names, color_names), axis = 0)    
     if len(seg_levels)>0:
         for seg in seg_levels:
-            segmentation = my_map.segmentations[seg][1].ravel().astype('int')
+            segmentation = my_map.segmentations[seg].ravel().astype('int')
             m_segs = int(np.max(segmentation))
             convert = np.zeros(n_segs+1).astype('int')
             convert[segs] = segmentation
@@ -263,19 +249,35 @@ def multi_segs(my_map, base_seg, seg_levels, ecognition = True):
             next_names = np.concatenate((shape_names, color_names), axis = 0)
             data = np.concatenate((next_data, data), axis = 1)
             names = np.concatenate((next_names, names), axis = 0)
-    return data, names'''
+    return data, names
+
+def haiti_ecog_features(seg):
+    json_file = open('segmentations/haiti/{}-features.json'.format(seg))
+    json_str = json_file.read()
+    #print json_str
+
+    json_data = json.loads(json_str.replace('inf', '0'))
+    n_segs = len(json_data['features'])
+    n_feats = len(json_data['features'][0]['properties'].values())
+
+    data = np.zeros((n_segs, n_feats))
+    json_features = json_data['features']
+    names = json_features[0]['properties'].keys()
+    for i in range(n_segs):
+        data[i] = json_features[i]['properties'].values()
+    return data, names
+    
+def haiti_features(my_map, base_seg, seg_levels):
     data, names = haiti_ecog_features(base_seg)
-    segs = my_map.segmentations[base_seg][1].ravel().astype('int')
-    n_segs = int(np.max(segs))
+    segs = my_map.segmentations[base_seg].ravel().astype('int')
     for seg in seg_levels:
-        segmentation = my_map.segmentations[seg][1].ravel().astype('int')
-        convert = np.zeros(n_segs+1).astype('int')
+        segmentation = my_map.segmentations[seg].ravel().astype('int')
+        convert = np.zeros(data.shape[0]).astype('int')
         convert[segs] = segmentation
         next_data, next_names = haiti_ecog_features(seg)
-        print data.shape, next_data.shape
-        print len(names), len(next_names)
         data = np.concatenate((next_data[convert], data), axis = 1)
         names = np.concatenate((next_names, names), axis = 0)
 
     return data, names
+
 

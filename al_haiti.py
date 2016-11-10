@@ -4,6 +4,7 @@ from object_model import ObjectClassifier
 import analyze_results
 import map_overlay
 import matplotlib.pyplot as plt
+import sys
 import numpy as np
 import sklearn
 from sklearn.externals.joblib import Parallel, delayed
@@ -12,16 +13,16 @@ from labeler import Labelers
 import cv2
 
 class al:    
-    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = False):
+    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = True):
         self.set_params()
         self.show            = show
         self.unique_email    = unique_email
         self.update_type     = update
-        self.postfix         = postfix #+ '_rf' if not random else postfix + '_random'
+        self.postfix         = postfix
         self.uncertainty     = self.rf_uncertainty if not random else self.random_uncertainty
         self.setup_map_split()
         self.labelers        = Labelers()
-        self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_segs])
+        self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_map.unique_segs(self.seg)])
         self.test_progress()
 
     def set_params(self):
@@ -30,7 +31,8 @@ class al:
         self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
-        self.path       = 'al/'
+        self.seg        = 20
+        self.path       = 'al_200/'
         self.fprs       = []
         self.UIs        = []
 
@@ -38,17 +40,11 @@ class al:
         self.train      = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
         self.test       = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
         self.haiti_map  = map_overlay.haiti_setup()
-        self.segs       = self.haiti_map.segmentations[20][1].astype('int')
-        self.train_segs = np.unique(self.segs[self.train]).astype(int)
-        self.test_segs  = np.unique(self.segs[self.test]).astype(int)
-        model           = ObjectClassifier(verbose = 0)
-        X               = model.get_X(self.haiti_map)
-        self.X_train    = X[self.train_segs]
-        self.X_test     = X[self.test_segs]
-
+        self.train_map  = self.haiti_map.sub_map(self.train)
+        self.test_map   = self.haiti_map.sub_map(self.test)
 
     def _gen_training_labels(self, y_train):
-        training_labels = np.ones_like(self.train_segs)*-1
+        training_labels = np.ones_like(y_train)*-1
         np.random.seed()
         for i in range(2):
             sub_samp = np.where(y_train==i)[0]
@@ -67,16 +63,16 @@ class al:
         return order
 
     def partial_segs_to_full(self, proba_segs, indcs):
-        segs = self.haiti_map.segmentations[20][1].ravel().astype('int')
+        segs = self.haiti_map.segmentations[20].ravel().astype('int')
         all_segs = np.zeros(np.max(segs)+1)
         all_segs[indcs] = proba_segs
         return all_segs
 
     def show_selected(self):
         lab_train_indcs = np.where(self.training_labels != -1)[0]
-        lab_indcs = self.train_segs[lab_train_indcs]
-        img = self.haiti_map.mask_segments_by_indx(lab_indcs, 20, 1, True)
-        img = cv2.cvtColor(img[self.train], cv2.COLOR_BGR2RGB)
+        lab_indcs = self.train_map.unique_segs(self.seg)[lab_train_indcs]
+        img = self.train_map.mask_segments_by_indx(lab_indcs, 20, 1, True)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         n_labeled = np.where(self.training_labels != -1)[0].shape[0]
         cv2.imwrite('{}selected_{}{}.png'.format(self.path, n_labeled,\
                                                  self.postfix), img)
@@ -86,14 +82,14 @@ class al:
         thresh = .06
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
-        model.fit(self.haiti_map, self.training_labels[training_sample], self.X_train[training_sample])
-        proba_segs = model.predict_proba_segs(self.haiti_map, self.X_train)
+        model.fit(self.train_map, self.training_labels, training_sample)
+        proba_segs = model.predict_proba_segs(self.train_map)
         if self.show:
             self.show_selected()
             fig = plt.figure()
-            segs_train = self.haiti_map.segmentations[20][1].astype('int')[self.train]
             n_labeled = np.where(self.training_labels != -1)[0].shape[0]
-            plt.imshow(self.partial_segs_to_full(proba_segs, self.train_segs)[segs_train], cmap = 'seismic', norm = plt.Normalize(0,1))
+            img = self.train_map.seg_convert(self.seg, proba_segs)
+            plt.imshow(img, cmap = 'seismic', norm = plt.Normalize(0,1))
             fig.savefig('{}test_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
             plt.close(fig)
         unknown_indcs = np.where(self.training_labels == -1)[0]
@@ -108,12 +104,13 @@ class al:
 
 
     def update_labels(self, new_training):
+        train_segs = self.train_map.unique_segs(self.seg)
         if self.update_type == "donmez":
-            new_labs = self.labelers.donmez_vote(self.train_segs[new_training], 0.85, True)
+            new_labs = self.labelers.donmez_vote(train_segs[new_training], 0.85, True)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
-            new_labs = self.labelers.majority_vote(self.train_segs[new_training])
+            new_labs = self.labelers.majority_vote(train_segs[new_training])
         else:
             new_labs = self.labelers.labeler(self.unique_email)[self.train_segs[new_training]]
         self.training_labels[new_training] = new_labs
@@ -122,13 +119,12 @@ class al:
     def test_progress(self):
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
-        model.fit(self.haiti_map, self.training_labels[training_sample], self.X_train[training_sample])
-        proba_segs = model.predict_proba_segs(self.haiti_map, self.X_test)
-        proba = self.partial_segs_to_full(proba_segs, self.test_segs)[self.segs][self.test]
-        g_truth = self.labelers.majority_vote()[self.segs][self.test]
+        model.fit(self.train_map, self.training_labels, training_sample)
+        proba = model.predict_proba(self.test_map)
+        g_truth = self.labelers.majority_vote()[self.test_map.segmentations[self.seg]]
         n_labeled = np.where(self.training_labels != -1)[0].shape[0]
         if self.show:
-            fig, AUC = analyze_results.ROC(self.haiti_map, g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
+            fig, AUC = analyze_results.ROC(g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
             fig.savefig('{}ROC_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
             plt.close(fig)
         FPR = analyze_results.FPR_from_FNR(g_truth.ravel(), proba.ravel(), TPR = self.TPR)
@@ -148,12 +144,12 @@ class al:
 
 
 
-def run_al(i, n_runs):
-    next_al = al(postfix = '_donmez_3_rf_{}'.format(i))
+def run_al(i, n_runs, random, update):
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
-    n_runs = 16
-    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs) for i in range(n_runs))
-    #a = al()
-    #a.run()
+    print sys.argv[1], sys.argv[2]
+    n_runs = 1
+    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
+    

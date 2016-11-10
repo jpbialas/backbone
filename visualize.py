@@ -8,7 +8,7 @@ import seg_classify as sc
 
 def vis_seg():
     my_map, X, y, names = sc.setup_segs(2, 50, [400], .5, jared = False)
-    segs = my_map.segmentations[50][1].ravel().astype('int')
+    segs = my_map.segmentations[50].ravel().astype('int')
     print segs.shape
     print names
     h,w = my_map.rows, my_map.cols

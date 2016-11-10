@@ -60,6 +60,7 @@ class Px_Map:
     '''
     def __init__(self, img):
         self.rows, self.cols, self.bands = img.shape
+        self.X = None
         self.img = img
         self.masks = {}
         self.segmentations = {}
@@ -69,14 +70,25 @@ class Px_Map:
 
     def sub_map(self, ix):
         f = lambda x: x.reshape((self.rows, self.cols))[ix]
-        g = lambda x: (x[0], f(x[1]))
         sub_img = self.img[ix]
         sub_map = Px_Map(sub_img)
         sub_map.masks = {k: f(v).ravel() for k, v in self.masks.items()}
-        sub_map.segmentations = {k: g(v) for k, v in self.segmentations.items()}
+        sub_map.segmentations = {k: f(v) for k, v in self.segmentations.items()}
         return sub_map
 
     
+    def unique_segs(self, level):
+        return np.unique(self.segmentations[level]).astype(int)
+
+    
+    def seg_convert(self, seg, arr):
+        uniques = self.unique_segs(seg)
+        assert(uniques[-1]+1>arr.shape[0])
+        all_segs = np.zeros(uniques[-1]+1)
+        all_segs[uniques] = arr
+        return all_segs[self.segmentations[seg]]
+
+
     def getMapData(self):
         '''
         OUTPUT: 
@@ -122,14 +134,14 @@ class Px_Map:
         '''
             masks_segments based on i, a boolean list indicating labelled segments
         '''
-        mask = np.in1d(self.segmentations[level][1],np.where(i))
+        mask = np.in1d(self.segmentations[level],np.where(i))
         return self.mask_helper(self.img, mask, opacity) if with_img else mask
 
     def mask_segments_by_indx(self, indcs, level,  with_img = True, opacity = .4):
         '''
             masks_segments based on indcs, a list of indices
         '''
-        mask = np.in1d(self.segmentations[level][1],indcs)
+        mask = np.in1d(self.segmentations[level],indcs)
         return self.mask_helper(self.img, mask, opacity) if with_img else mask
 
 
@@ -159,7 +171,7 @@ class Px_Map:
 
     def new_seg_raster(self, raster, level):
         assert(raster.shape == (self.rows, self.cols))
-        self.segmentations[level] = (name,raster)
+        self.segmentations[level] = raster
 
 
 class Geo_Map(Px_Map):
@@ -185,12 +197,13 @@ class Geo_Map(Px_Map):
         name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
         p = os.path.join('processed_segments', "{}.npy".format(name))
         if os.path.exists(p) and save:
-            self.segmentations[level] =  (name,np.load(p))
+            mask = np.load(p)
         else:
             mask = self.rasterize_shp(shape_fn, mask_name)
-            self.new_seg_raster(mask, level)
             if save:
                 np.save(p, mask)
+        self.new_seg_raster(mask, level)
+            
     
 
     def latlonToPx(self, x, y):

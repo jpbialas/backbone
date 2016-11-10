@@ -94,7 +94,7 @@ class Labelers:
         majority_vote = np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
         if update:
             new_rewards = (top_voters == majority_vote)
-            bonus = ((new_rewards+top_voters)>1)*19 #Bonus for getting 1 correct
+            bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
             new_rewards = new_rewards+bonus
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
@@ -132,7 +132,7 @@ class Labelers:
 
 
     def show_prob_vote(self, disp_map, level = 20):
-        segs = disp_map.segmentations[level][1]
+        segs = disp_map.segmentations[level]
         probs = np.sum(self.labels, axis = 0).astype('float')/float(len(self.user_map))
         img = disp_map.mask_helper(disp_map.img, probs[segs], opacity = .8)
         self.show_img(img, 'Probability Vote')

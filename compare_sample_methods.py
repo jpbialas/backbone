@@ -132,7 +132,7 @@ def look_at_features(names, indices):
     clf = ObjectClassifier()
     damage_labels = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     building_labels = np.loadtxt('damagelabels50/all_rooftops-3-3.csv', delimiter  =',').astype('int')
-    segs = map_train.segmentations[50][1]
+    segs = map_train.segmentations[50]
     n_segs = int(np.max(segs.ravel()))+1
     all_labels = np.zeros(n_segs) #Nothing = Green
     all_labels[damage_labels] = 1  #Damage = Red
@@ -163,7 +163,7 @@ def transition():
     clf = ObjectClassifier()
     damage_labels = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     building_labels = np.loadtxt('damagelabels50/all_buildings-3-3.csv', delimiter  =',').astype('int')
-    segs = map_train.segmentations[50][1].ravel()
+    segs = map_train.segmentations[50].ravel()
     n_segs = int(np.max(segs))+1
     all_labels = np.zeros(n_segs) #Nothing = Green
     all_labels[damage_labels] = 1  #Damage = Red
@@ -182,7 +182,7 @@ def transition():
 def comparepx(k):
     N_INDCS = -1
     map_test, map_train = map_overlay.basic_setup([100], 50, label_name = "all_buildings")
-    segs = map_train.segmentations[50][1].ravel().astype('int')
+    segs = map_train.segmentations[50].ravel().astype('int')
     clf = PxClassifier(85,-1)
     damage_labels = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     building_labels = np.loadtxt('damagelabels50/all_buildings-3-3.csv', delimiter  =',').astype('int')
@@ -224,7 +224,7 @@ def compare(k):
     clf = ObjectClassifier()
     damage_labels = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     building_labels = np.loadtxt('damagelabels50/all_rooftops-3-3.csv', delimiter  =',').astype('int')
-    segs = map_train.segmentations[50][1].ravel()
+    segs = map_train.segmentations[50].ravel()
     n_segs = int(np.max(segs))+1
     all_labels = np.zeros(n_segs) #Nothing = Green
     all_labels[damage_labels] = 1  #Damage = Red

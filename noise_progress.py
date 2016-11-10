@@ -132,8 +132,8 @@ def main_dilate():
     test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
 
-    test_segs = map_2.segmentations[50][1].ravel().astype('int')
-    train_segs = map_3.segmentations[50][1].ravel().astype('int')
+    test_segs = map_2.segmentations[50].ravel().astype('int')
+    train_segs = map_3.segmentations[50].ravel().astype('int')
     damage_ground = indcs2bools(test_damage, test_segs)
     building_ground = indcs2bools(test_buildings, test_segs)
     damage_AUCs = []
@@ -157,8 +157,8 @@ def main_dilate():
             prediction += model.predict_proba(map_2)
         prediction /= k
 
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(map_2, damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(map_2, building_ground, prediction, model.test_name+' building', save = False)
+        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
+        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
         d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
         b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
         damage_AUCs.append(d_AUC)
@@ -205,7 +205,7 @@ def main_segs():
     real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50][1].ravel().astype('int')
+    test_segs = map_2.segmentations[50].ravel().astype('int')
     damage_ground = indcs2bools(test_damage, test_segs)
     building_ground = indcs2bools(test_buildings, test_segs)
     damage_AUCs = np.zeros(100)
@@ -215,7 +215,7 @@ def main_segs():
     damage_perecents = np.zeros(100)
     building_percents = np.zeros(100)
     model = ObjectClassifier(verbose = 0)
-    train_segs = map_3.segmentations[50][1].ravel().astype('int')
+    train_segs = map_3.segmentations[50].ravel().astype('int')
     X, _ = model._get_X_y(map_3, "Jared", custom_labels = indcs2bools(real_damage, train_segs))
 
     for i in range(100):
@@ -235,8 +235,8 @@ def main_segs():
             prediction += model.predict_proba(map_2)
         prediction /= k
 
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(map_2, damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(map_2, building_ground, prediction, model.test_name+' building', save = False)
+        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
+        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
         d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
         b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
         damage_AUCs[i] = d_AUC
@@ -283,7 +283,7 @@ def main_dilate_px():
     building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
     test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50][1].ravel().astype('int')
+    test_segs = map_2.segmentations[50].ravel().astype('int')
     damage_ground = indcs2bools(test_damage, test_segs)
     building_ground = indcs2bools(test_buildings, test_segs)
     damage_AUCs = np.zeros(50)
@@ -321,8 +321,8 @@ def main_dilate_px():
         prediction /= k
         prediction = prediction.reshape((map_2.rows, map_2.cols))
 
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(map_2, damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(map_2, building_ground, prediction, model.test_name+' building', save = False)
+        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
+        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
         d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
         b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
         damage_AUCs[i] = d_AUC
@@ -370,7 +370,7 @@ def main():
     real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
     test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
     test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50][1].ravel().astype('int')
+    test_segs = map_2.segmentations[50].ravel().astype('int')
     damage_ground = indcs2bools(test_damage, test_segs)
     building_ground = indcs2bools(test_buildings, test_segs)
     damage_AUCs = np.zeros(100)
@@ -408,8 +408,8 @@ def main():
         prediction /= k
         prediction = prediction.reshape((map_2.rows, map_2.cols))
 
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(map_2, damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(map_2, building_ground, prediction, model.test_name+' building', save = False)
+        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
+        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
         d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
         b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
         damage_AUCs[i] = d_AUC
