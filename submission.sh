@@ -1,7 +1,7 @@
 #!/bin/bash
-#PBS -q shortq
+#PBS -q longq
 #PBS -l select=2:ncpus=16:mpiprocs=16
-#PBS -l walltime=1:00:00
+#PBS -l walltime=16:00:00
 #PBS -m abe 
 #PBS -M jaredsfrank@gmail.com 
 
@@ -38,4 +38,4 @@ module load mpi-sgi/2.04_64
 #
 cd $RUN_DIR
 #mpiexec -n 4 ./executable
-python object_model.py
+python al_haiti.py random majority
