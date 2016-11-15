@@ -34,15 +34,19 @@ class Labelers:
                     self.user_map[email] = len(self.user_map)
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels3.csv'
+        fn = 'damagelabels20/labels4.csv'
+        indices = [np.arange(0,30354), np.arange(30354,67105),np.arange(67105, 97710)]
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
-        self.labels = np.zeros((len(self.user_map), self.n))
+        self.labels = np.ones((len(self.user_map), self.n))*-1
         with open(fn, mode='r') as infile:
             reader = csv.reader(infile)
             for row in reader:
+                #Find label number, label those indices as all zeros then apply the label indices
                 email = row[0][:row[0].find('_')]
+                img_num = int(row[2])
                 labels = np.array(map(int, row[3][1:-1].split(',')))
+                self.labels[self.user_map[email]][indices[img_num]] = 0
                 self.labels[self.user_map[email]][labels] = 1
 
     def add_labels(self, email, boolean_map):
@@ -90,25 +94,31 @@ class Labelers:
 
     def donmez_vote(self, label_indices, error, update = True):
         top_indices = self.top_labelers(error)
-        top_voters = self.labels[top_indices][:, label_indices]
-        majority_vote = np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
+        top_voters = self.labels[np.ix_(top_indices, label_indices)]
+        majority_vote = self.majority_vote(label_indices, top_indices)#np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
         if update:
             new_rewards = (top_voters == majority_vote)
             bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
             new_rewards = new_rewards+bonus
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
-            self.rewards[top_indices,2] += new_rewards.shape[1] 
+            self.rewards[top_indices,2] += np.bincount(np.where(top_voters>=0)[0])
+            # NEED TO CHANGE THIS SO COUNT DOESNT INCREASE FOR -1s
+            # subtract np.sum(np.where(top_voters<0)[0]) from count
+            # real: self.rewards[...] += np.bincount(np.where(top_voters>=0)[0])
         return majority_vote
 
 
-    def majority_vote(self, label_indices = None, labeler_indices = None):
+    def probability(self, label_indices = None, labeler_indices = None):
         if label_indices is None:
             label_indices = np.arange(self.n)
         if labeler_indices is None:
             labeler_indices = np.arange(self.labels.shape[0])
         indcs = np.ix_(labeler_indices, label_indices)
-        return np.sum(self.labels[indcs], axis = 0)/float(labeler_indices.shape[0])>=0.5
+        return np.sum(self.labels[indcs]>0, axis = 0)/np.sum(self.labels[indcs]>=0, axis = 0).astype('float')
+
+    def majority_vote(self, label_indices = None, labeler_indices = None):
+        return self.probability(label_indices, labeler_indices)>=0.5
 
 
     def individual_vote(self, label_indices):
@@ -133,7 +143,7 @@ class Labelers:
 
     def show_prob_vote(self, disp_map, level = 20):
         segs = disp_map.segmentations[level]
-        probs = np.sum(self.labels, axis = 0).astype('float')/float(len(self.user_map))
+        probs = self.probability()
         img = disp_map.mask_helper(disp_map.img, probs[segs], opacity = .8)
         self.show_img(img, 'Probability Vote')
 
@@ -143,11 +153,26 @@ class Labelers:
         self.show_img(img, email)
 
 
-    def get_FPR_TPR(self):
-        relevant_labels = self.labels[:, 97710/3:97710/2*3]
-        probs = np.sum(relevant_labels, axis = 0).astype('float')/float(len(self.user_map))
-        TPR = np.sum(relevant_labels*probs, axis = 1)/np.sum(probs)
-        FPR = np.sum(relevant_labels*(1-probs), axis = 1)/np.sum(1-probs)
+    def get_FPR_TPR(self, label_indices):
+        probs = self.probability()
+        TPRs = np.zeros(self.labels.shape[0])
+        FPRs = np.zeros(self.labels.shape[0])
+        for i in range(self.labels.shape[0]):
+            labels = self.labels[i, label_indices]
+            lab_probs = probs[label_indices]
+            queriable = np.where(labels>=0)[0]
+            labels = labels[queriable]
+            lab_probs = lab_probs[queriable]
+            TPR = np.sum(labels*lab_probs)/np.sum(lab_probs)
+            FPR = np.sum(labels*(1-lab_probs))/np.sum(1-lab_probs)
+            TPRs[i] = TPR
+            FPRs[i] = FPR
+        return FPRs, TPRs
+
+
+    def show_FPR_TPR(self):
+        relevant_labels = np.arange(30354,97710).astype('int')
+        FPR, TPR = self.get_FPR_TPR(relevant_labels)
         fig, ax = plt.subplots()
         ax.scatter(FPR, TPR)
         names = self.emails
@@ -178,13 +203,18 @@ def test():
     print label_list.donmez_vote(np.arange(3), .5, True) == np.array([0,0,1])
     print label_list.UI()'''
 
+    haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
+    labelers.show_FPR_TPR()
+    #labelers.show_majority_vote(haiti_map)
+    #labelers.show_prob_vote(haiti_map)
+    plt.show()
     #print labelers.emails
     #print labelers.donmez_vote(np.arange(labelers.n), 0.5, False)
     #print labelers.UI()
-    labelers.donmez_vote(np.arange(labelers.n/3, labelers.n), 0.5, True)
+    #labelers.donmez_vote(np.arange(labelers.n/3, labelers.n), 0.5, True)
 
-    print zip(labelers.emails, labelers.UI())
+    #print zip(labelers.emails, labelers.UI())
     '''labelers.donmez_vote(np.arange(labelers.n), 0.75, True)
     print labelers.UI()
     print labelers.rewards

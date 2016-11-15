@@ -121,10 +121,10 @@ class ObjectClassifier():
 
 
 def main_haiti():
-    model = ObjectClassifier(1)
-    y = Labelers().majority_vote()
-    test      = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
-    train       = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
+    model      = ObjectClassifier(1)
+    y          = Labelers().majority_vote()
+    test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+    train      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
@@ -141,7 +141,32 @@ def main_haiti():
     plt.imshow(test_map.mask_helper(test_map.img, probs>0.5))
     plt.show()
 
+def label_test():
+    model      = ObjectClassifier(1)
+    labelers   = Labelers()
+    test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+    train      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
+    haiti_map  = map_overlay.haiti_setup()
+    train_map  = haiti_map.sub_map(train)
+    test_map   = haiti_map.sub_map(test)
+    for email in labelers.emails:
+        print email
+        fig = plt.figure(email)
+        fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+        y = (labelers.labeler(email) == labelers.majority_vote())
+        probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
+        plt.imshow(probs, cmap = 'seismic',  norm = plt.Normalize(0,1))
+        plt.title(email), plt.xticks([]), plt.yticks([])    
+    plt.figure('img')
+    plt.imshow(test_map.img)
+    plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+    plt.show()
+
+
+
+
 if __name__ == '__main__':
-    main_haiti()
+    #main_haiti()
+    label_test()
 
 
