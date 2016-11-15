@@ -103,7 +103,7 @@ class Labelers:
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
             bcount = np.bincount(np.where(top_voters>=0)[0])
-            self.rewards[top_indices,2] += bcount
+            self.rewards[top_indices[:bcount.shape[0]],2] += bcount
             # NEED TO CHANGE THIS SO COUNT DOESNT INCREASE FOR -1s
             # subtract np.sum(np.where(top_voters<0)[0]) from count
             # real: self.rewards[...] += np.bincount(np.where(top_voters>=0)[0])
