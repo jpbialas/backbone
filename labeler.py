@@ -98,8 +98,8 @@ class Labelers:
         majority_vote = self.majority_vote(label_indices, top_indices)#np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
         if update:
             new_rewards = (top_voters == majority_vote)
-            bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
-            new_rewards = new_rewards+bonus
+            #bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
+            new_rewards = new_rewards#+bonus
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
             bcount = np.bincount(np.where(top_voters>=0)[0])
