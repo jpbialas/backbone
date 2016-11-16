@@ -175,6 +175,9 @@ class Px_Map:
 
 
 class Geo_Map(Px_Map):
+    '''
+    Note Geo_Map is not pickleable due to gdal elements. but Px_Map is
+    '''
 
     def __init__(self, map_fn):
         self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]

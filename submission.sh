@@ -1,9 +1,8 @@
 #!/bin/bash
 #PBS -q longq
-#PBS -l select=2:ncpus=16:mpiprocs=16
+#PBS -l select=1:ncpus=16:mpiprocs=16
 #PBS -l walltime=16:00:00
-#PBS -m abe 
-#PBS -M jaredsfrank@gmail.com 
+#PBS -J 0-8
 
 # NOTE
 # '#PBS' directives must immediately follow your shell initialization line '#!/bin/<shell>'
@@ -38,4 +37,4 @@ module load mpi-sgi/2.04_64
 #
 cd $RUN_DIR
 #mpiexec -n 4 ./executable
-python al_haiti.py random majority
+python al_haiti.py ${PBS_ARRAY_INDEX} random majority

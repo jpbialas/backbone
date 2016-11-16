@@ -154,23 +154,24 @@ def label_test():
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    for email in ['dlmcclou@mtu.edu']:#labelers.emails[np.array([0,1,2,3,4,5,6,10,11,12])]:
+    for email in labelers.emails[np.array([0,1,2,3,4,5,6,10,11,12, 16, 17])]:
         print email
         img = labelers.show_labeler(email, test_map)
-        
-        plt.show()
         fig = plt.figure(email)
         fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
         y = (labelers.labeler(email) == labelers.majority_vote())
         probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
         plt.imshow(probs, cmap = 'seismic',  norm = plt.Normalize(0,1))
         plt.title(email), plt.xticks([]), plt.yticks([])
-        analyze_results.contour_map(img, probs<0.5, 'x<0.5')
-        analyze_results.contour_map(img, (probs<0.6)-(probs<.4), '0.4<x<0.6')
-        analyze_results.contour_map(img, (probs<0.25), 'x<.25')
-        analyze_results.contour_map(img, (probs<0.6), 'x<0.6')
-        analyze_results.ROC(y[test_map.segmentations[20]].ravel(), probs.ravel(), 'ROC')
-    plt.figure('img')
+        fig.savefig('label_predict/{}_predict.png'.format(email), format='png', dpi = 800)
+        #analyze_results.contour_map(img, probs<0.5, 'x<0.5')
+        #analyze_results.contour_map(img, (probs<0.6)-(probs<.4), '0.4<x<0.6')
+        #analyze_results.contour_map(img, (probs<0.25), 'x<.25')
+        #analyze_results.contour_map(img, (probs<0.6), 'x<0.6')
+        fig = analyze_results.ROC(y[test_map.segmentations[20]].ravel(), probs.ravel(), email)[0]
+        fig.savefig('label_predict/{}_ROC.png'.format(email), format='png', dpi = 600)
+    fig = plt.figure('img')
+    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     plt.imshow(test_map.img)
     plt.title('Original Image'), plt.xticks([]), plt.yticks([])
     plt.show()

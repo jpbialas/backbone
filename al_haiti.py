@@ -23,7 +23,7 @@ class al:
         self.setup_map_split()
         self.labelers        = Labelers()
         self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_map.unique_segs(self.seg)])
-        self.test_progress()
+        #self.test_progress()
 
     def set_params(self):
         self.start_n    = 50
@@ -32,7 +32,7 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_test/'
+        self.path       = 'al_testing/'
         self.fprs       = []
         self.UIs        = []
 
@@ -150,11 +150,10 @@ class al:
 
 
 def run_al(i, n_runs, random, update):
-    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = 't_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
-    print sys.argv[1], sys.argv[2]
-    n_runs = 16
-    Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
+    run_al(sys.argv[0], sys.argv[1], sys.argv[2])
+    #Parallel(n_jobs=-1, verbose = 1)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
     

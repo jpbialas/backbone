@@ -5,6 +5,16 @@ import map_overlay
 import matplotlib.pyplot as plt
 from object_model import ObjectClassifier
 from scipy.stats import t
+from sklearn.externals.joblib import Parallel, delayed
+
+def model_vote_help(train_map, labels, majority_vote, train_indcs, new_train):
+    uniques = train_map.unique_segs(20)
+    new_model = ObjectClassifier()
+    indcs = np.array(train_indcs)
+    new_model.fit(train_map, (labels == majority_vote)[uniques], indcs)
+    probs = new_model.predict_proba_segs(train_map, new_train)
+    good_indices = np.where((probs>0.05) & (labels[uniques[new_train]]>-1))
+    return good_indices
 
 class Labelers:
     def __init__(self, n = 97710, basic_setup = True):
@@ -109,7 +119,22 @@ class Labelers:
             good_indices = new_train[np.where(self.labels[i][uniques[new_train]]>-1)]
             self.train_indcs[i]+=list(good_indices)
 
+
     def model_vote(self, train_map, new_train):
+        uniques = train_map.unique_segs(20)
+        total_vote = np.zeros(len(new_train))
+        count = np.zeros(len(new_train))
+        majority_vote = self.majority_vote()
+        results = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.labels[i], majority_vote[i], self.train_indcs[i], new_train) for i in range(len(self.labels)))
+        for j in range(len(self.labels)):
+            good_indices = results[j]
+            self.train_indcs[j]+=list(new_train[good_indices])
+            total_vote[good_indices] += self.labels[j][uniques[new_train[good_indices]]]
+            count[good_indices] += 1
+        return total_vote/count.astype('float')>=0.5
+        
+
+    def model_vote_serial(self, train_map, new_train):
         #1 Create total_vote array of length label_indices
         #2 Create count array of length label_indices
         #For each labeler
@@ -198,7 +223,7 @@ class Labelers:
 
 
     def show_labeler(self, email, disp_map, level = 20):
-        img = disp_map.mask_segments(self.labeler(email), level, with_img = True, opacity = .4)
+        img = disp_map.mask_segments(self.labeler(email)>0, level, with_img = True, opacity = .4)
         self.show_img(img, email)
         return img
 
@@ -229,12 +254,12 @@ class Labelers:
         ax.plot(np.array([0,1]), np.array([0,1]))
         for i in range(FPR.shape[0]):
             ax.annotate(names[i], (FPR[i], TPR[i]))
-
-        ax.annotate('Under Labeler', (.002, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        ax.annotate('Over Labeler', (.092, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        ax.annotate('Good Labeler', (.002, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        ax.annotate('Bad Labeler', (.092, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        plt.title('Label Comparison'), plt.xlabel('FPR'), plt.ylabel('TPR'), plt.ylim([0,1]), plt.xlim([0,.1])
+        print FPR.shape
+        #ax.annotate('Under Labeler', (.002, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        #ax.annotate('Over Labeler', (.092, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        #ax.annotate('Good Labeler', (.002, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        #ax.annotate('Bad Labeler', (.092, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        plt.title('Label Comparison'), plt.xlabel('FPR'), plt.ylabel('TPR'), plt.ylim([0,1]), plt.xlim([0,1])
 
 
 
@@ -257,8 +282,9 @@ def test():
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
     labelers.show_FPR_TPR()
-    labelers.show_labeler('masexaue@mtu.edu', haiti_map)
-    labelers.show_labeler('alex@renda.org', haiti_map)
+    labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
+    #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
+    #labelers.show_labeler('alex@renda.org', haiti_map)
     #labelers.show_majority_vote(haiti_map)
     #labelers.show_prob_vote(haiti_map)
     plt.show()
