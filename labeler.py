@@ -13,7 +13,7 @@ def model_vote_help(train_map, labels, majority_vote, train_indcs, new_train):
     indcs = np.array(train_indcs)
     new_model.fit(train_map, (labels == majority_vote)[uniques], indcs)
     probs = new_model.predict_proba_segs(train_map, new_train)
-    good_indices = np.where((probs>0.05) & (labels[uniques[new_train]]>-1))
+    good_indices = np.where((probs>0.5) & (labels[uniques[new_train]]>-1))
     return good_indices
 
 class Labelers:
