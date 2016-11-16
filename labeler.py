@@ -3,6 +3,7 @@ import cv2
 import csv
 import map_overlay
 import matplotlib.pyplot as plt
+from object_model import ObjectClassifier
 from scipy.stats import t
 
 class Labelers:
@@ -10,6 +11,8 @@ class Labelers:
         self.user_map = {}
         self.labels = np.array([])
         self.rewards = np.array([]) #nx3 matrix for n labelers, storing sum(x), sum(x^2), n_rewards
+        self.label_models = []
+        self.train_indcs = np.array([])
         self.n = n
         if basic_setup:
             self.basic_setup()
@@ -23,6 +26,10 @@ class Labelers:
             all_emails[self.user_map[i]] = i
         return all_emails
 
+    def add_empty(self):
+        self.train_indcs = np.hstack((self.train_indcs, np.array([0]).astype('object')))
+        self.train_indcs[-1] = []
+
 
     def _unique_emails(self, fn):
         with open(fn, mode='r') as infile:
@@ -32,6 +39,9 @@ class Labelers:
                 email = row[0][:row[0].find('_')] 
                 if not email in self.user_map:
                     self.user_map[email] = len(self.user_map)
+                    self.add_empty()
+
+
 
     def basic_setup(self):
         fn = 'damagelabels20/labels4.csv'
@@ -58,10 +68,12 @@ class Labelers:
             self.labels = np.vstack((self.labels, boolean_map))
             self.user_map[email] = len(self.user_map)
             self.rewards = np.vstack((self.rewards,np.array([1,1,2])))
+            self.add_empty()
         else:
             self.labels = np.array(boolean_map).reshape((1,self.n))
             self.user_map[email] = 0
             self.rewards = np.array([1,1,2]).reshape((1,3))
+            self.add_empty()
 
     def add_label_index(self, email, indices):
         new_booleans = np.zeros(self.n)
@@ -91,6 +103,39 @@ class Labelers:
         threshold = error*max_ui
         return np.where(all_ui>threshold)[0]
 
+    def model_start(self, train_map, new_train):
+        uniques = train_map.unique_segs(20)
+        for i in range(len(self.labels)):
+            good_indices = new_train[np.where(self.labels[i][uniques[new_train]]>-1)]
+            self.train_indcs[i]+=list(good_indices)
+
+    def model_vote(self, train_map, new_train):
+        #1 Create total_vote array of length label_indices
+        #2 Create count array of length label_indices
+        #For each labeler
+            #1 Train model on all current indices
+            #3 Predict labeler probs for new indices (probs)
+            #4 Usable indices are those whose prob is above the threshold (probs>.75)
+            #5 Add the indices for those valid probs to current indices
+            #6 Add those index labels to the total_vote and count arrays
+        #Return total_vote/count.astype('float')>0.5
+
+        uniques = train_map.unique_segs(20)
+        total_vote = np.zeros(len(new_train))
+        count = np.zeros(len(new_train))
+        for i in range(len(self.labels)):
+            new_model = ObjectClassifier()
+            indcs = np.array(self.train_indcs[i])
+            labels = (self.labels == self.majority_vote())[i][uniques]
+            new_model.fit(train_map, labels, indcs)
+            probs = new_model.predict_proba_segs(train_map, new_train)
+            good_indices = np.where((probs>0.75) & (self.labels[i][uniques[new_train]]>-1))
+            self.train_indcs[i]+=list(new_train[good_indices])
+            total_vote[good_indices] += self.labels[i][uniques[new_train[good_indices]]]
+            count[good_indices] += 1
+        print count
+        return total_vote/count.astype('float')>0.5
+
 
     def donmez_vote(self, label_indices, error, update = True):
         top_indices = self.top_labelers(error)
@@ -98,8 +143,8 @@ class Labelers:
         majority_vote = self.majority_vote(label_indices, top_indices)#np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
         if update:
             new_rewards = (top_voters == majority_vote)
-            #bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
-            new_rewards = new_rewards#+bonus
+            bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
+            new_rewards = new_rewards+bonus
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
             bcount = np.bincount(np.where(top_voters>=0)[0])
@@ -110,6 +155,10 @@ class Labelers:
         return majority_vote
 
 
+    def majority_vote(self, label_indices = None, labeler_indices = None):
+        return self.probability(label_indices, labeler_indices)>=0.5
+
+
     def probability(self, label_indices = None, labeler_indices = None):
         if label_indices is None:
             label_indices = np.arange(self.n)
@@ -117,9 +166,6 @@ class Labelers:
             labeler_indices = np.arange(self.labels.shape[0])
         indcs = np.ix_(labeler_indices, label_indices)
         return np.sum(self.labels[indcs]>0, axis = 0)/np.sum(self.labels[indcs]>=0, axis = 0).astype('float')
-
-    def majority_vote(self, label_indices = None, labeler_indices = None):
-        return self.probability(label_indices, labeler_indices)>=0.5
 
 
     def individual_vote(self, label_indices):
@@ -138,8 +184,9 @@ class Labelers:
 
 
     def show_majority_vote(self, disp_map, level = 20):
-        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = .4)
+        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = .2)
         self.show_img(img, 'Majority Vote')
+        return img
 
 
     def show_prob_vote(self, disp_map, level = 20):
@@ -147,11 +194,13 @@ class Labelers:
         probs = self.probability()
         img = disp_map.mask_helper(disp_map.img, probs[segs], opacity = .8)
         self.show_img(img, 'Probability Vote')
+        return img
 
 
     def show_labeler(self, email, disp_map, level = 20):
         img = disp_map.mask_segments(self.labeler(email), level, with_img = True, opacity = .4)
         self.show_img(img, email)
+        return img
 
 
     def get_FPR_TPR(self, label_indices):
@@ -180,11 +229,12 @@ class Labelers:
         ax.plot(np.array([0,1]), np.array([0,1]))
         for i in range(FPR.shape[0]):
             ax.annotate(names[i], (FPR[i], TPR[i]))
+
         ax.annotate('Under Labeler', (.002, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        ax.annotate('Over Labeler', (.052, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        ax.annotate('Over Labeler', (.092, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
         ax.annotate('Good Labeler', (.002, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        ax.annotate('Bad Labeler', (.052, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        plt.title('Label Comparison'), plt.xlabel('FPR'), plt.ylabel('TPR'), plt.ylim([0,1]), plt.xlim([0,.06])
+        ax.annotate('Bad Labeler', (.092, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        plt.title('Label Comparison'), plt.xlabel('FPR'), plt.ylabel('TPR'), plt.ylim([0,1]), plt.xlim([0,.1])
 
 
 
@@ -207,6 +257,8 @@ def test():
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
     labelers.show_FPR_TPR()
+    labelers.show_labeler('masexaue@mtu.edu', haiti_map)
+    labelers.show_labeler('alex@renda.org', haiti_map)
     #labelers.show_majority_vote(haiti_map)
     #labelers.show_prob_vote(haiti_map)
     plt.show()

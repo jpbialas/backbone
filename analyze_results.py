@@ -124,6 +124,13 @@ def probability_heat_map(map_test, full_predict, name, save = False):
         fig.savefig('Compare Methods/{}_heatmap.png'.format(name), format='png', dpi = 2400)
     return fig
 
+def contour_map(img, full_predict, title = 'Contour Map'):
+    fig = plt.figure(title)
+    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
+    plt.contour(full_predict, colors = 'green')
+    plt.imshow(img)
+    plt.title(title), plt.xticks([]), plt.yticks([])
+
 def average_class_prob(map_test, ground_truth, full_predict, name):
     return np.sum(ground_truth.ravel().astype('float')*full_predict.ravel())/(np.sum(ground_truth.ravel()))
 
@@ -157,11 +164,11 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
 
 
 def ROC(ground_truth, full_predict, name, save = False):
-    FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
+    FPRs, TPRs, threshs = roc_curve(ground_truth.ravel(), full_predict.ravel())
     opt_thresh = threshs[np.argmin(FPRs**2 + (1-TPRs)**2)]
 
     fig = plt.figure('{} ROC'.format(name))
-    AUC = sklearn.metrics.roc_auc_score(ground_truth, full_predict.ravel())
+    AUC = sklearn.metrics.roc_auc_score(ground_truth.ravel(), full_predict.ravel())
     plt.scatter(FPRs, TPRs)
     plt.title('ROC Curve (AUC = {})'.format(round(AUC, 5)))
     plt.xlabel('False Positive Rate')

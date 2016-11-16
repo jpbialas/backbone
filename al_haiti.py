@@ -48,9 +48,11 @@ class al:
         np.random.seed()
         for i in range(2):
             sub_samp = np.where(y_train==i)[0]
-            indices = np.random.choice(sub_samp, self.start_n//2, replace = False)
-            self.labelers.donmez_vote(indices, .85, True)
-            training_labels[indices] = i
+            train_indices = np.random.choice(sub_samp, self.start_n//2, replace = False)
+            seg_indices = self.train_map.unique_segs(20)[train_indices]
+            self.labelers.donmez_vote(seg_indices, .85, True)
+            self.labelers.model_start(self.train_map, train_indices)
+            training_labels[train_indices] = i
         return training_labels
 
 
@@ -111,8 +113,11 @@ class al:
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
             new_labs = self.labelers.majority_vote(train_segs[new_training])
-        else:
-            new_labs = self.labelers.labeler(self.unique_email)[self.train_segs[new_training]]
+        elif self.update_type == "email":
+            new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
+        elif self.update_type == "model":
+            new_labs = self.labelers.model_vote(self.train_map, new_training)
+
         self.training_labels[new_training] = new_labs
 
 
@@ -145,11 +150,11 @@ class al:
 
 
 def run_al(i, n_runs, random, update):
-    next_al = al(postfix = '_{}_no_bonus_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
     print sys.argv[1], sys.argv[2]
-    n_runs = 16
+    n_runs = 1
     Parallel(n_jobs=n_runs)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
     
