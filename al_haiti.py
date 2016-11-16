@@ -32,7 +32,7 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_testing/'
+        self.path       = 'al_test/'
         self.fprs       = []
         self.UIs        = []
 
@@ -154,6 +154,7 @@ def run_al(i, n_runs, random, update):
     next_al.run()
 
 if __name__ == '__main__':
-    run_al(sys.argv[0], sys.argv[1], sys.argv[2])
+    n_runs = 8
+    run_al(sys.argv[0], 8, sys.argv[1], sys.argv[2])
     #Parallel(n_jobs=-1, verbose = 1)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
     
