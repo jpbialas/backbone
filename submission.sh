@@ -1,7 +1,8 @@
 #!/bin/bash
 #PBS -q longq
-#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l select=2:ncpus=16:mpiprocs=16
 #PBS -l walltime=16:00:00
+#PBS -e errors
 #PBS -J 0-8
 
 # NOTE
