@@ -37,4 +37,4 @@ module load mpi-sgi/2.04_64
 #
 cd $RUN_DIR
 #mpiexec -n 4 ./executable
-python al_haiti.py ${PBS_ARRAY_INDEX} random majority
+python al_haiti.py ${PBS_ARRAY_INDEX} rf model
