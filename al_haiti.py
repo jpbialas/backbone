@@ -23,10 +23,10 @@ class al:
         self.setup_map_split()
         self.labelers        = Labelers()
         self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_map.unique_segs(self.seg)])
-        #self.test_progress()
+        self.test_progress()
 
     def set_params(self):
-        self.start_n    = 2000
+        self.start_n    = 400
         self.batch_size = 50
         self.updates    = 700
         self.verbose    = 1
