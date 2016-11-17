@@ -114,7 +114,7 @@ class al:
         elif self.update_type == "majority":
             new_labs = self.labelers.majority_vote(train_segs[new_training])
         elif self.update_type == "random":
-            labelers = np.random.randint(0, len(self.labelers), len(new_training))
+            labelers = np.random.randint(0, len(self.labelers.labels), len(new_training))
             new_labs = self.labelers[labelers, train_segs[new_training]]
         elif self.update_type == "email":
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
