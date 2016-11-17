@@ -7,23 +7,20 @@ from object_model import ObjectClassifier
 from scipy.stats import t
 from sklearn.externals.joblib import Parallel, delayed
 
-def model_vote_help(train_map, labels, majority_vote, train_indcs, new_train):
-    uniques = train_map.unique_segs(20)
+def model_vote_help(train_map, q_labels, majority_vote, new_train):
     new_model = ObjectClassifier()
-    indcs = np.array(train_indcs)
-    new_model.fit(train_map, (labels == majority_vote)[uniques], indcs)
+    indcs = np.where(q_labels>-1)
+    new_model.fit(train_map, (q_labels == majority_vote), indcs)
     probs = new_model.predict_proba_segs(train_map, new_train)
-    good_indices = np.where((probs>0.5) & (labels[uniques[new_train]]>-1))
-    bad_indices = np.where((probs<0.5) & (labels[uniques[new_train]]>-1))
-    return good_indices, bad_indices
+    good_indices = np.where((probs>0.5) & (q_labels[new_train]>-2))
+    return good_indices
 
 class Labelers:
     def __init__(self, n = 97710, basic_setup = True):
         self.user_map = {}
         self.labels = np.array([])
+        self.q_labels = np.array([])
         self.rewards = np.array([]) #nx3 matrix for n labelers, storing sum(x), sum(x^2), n_rewards
-        self.label_models = []
-        self.train_indcs = np.array([])
         self.n = n
         if basic_setup:
             self.basic_setup()
@@ -37,9 +34,6 @@ class Labelers:
             all_emails[self.user_map[i]] = i
         return all_emails
 
-    def add_empty(self):
-        self.train_indcs = np.hstack((self.train_indcs, np.array([0]).astype('object')))
-        self.train_indcs[-1] = []
 
 
     def _unique_emails(self, fn):
@@ -50,8 +44,6 @@ class Labelers:
                 email = row[0][:row[0].find('_')] 
                 if not email in self.user_map:
                     self.user_map[email] = len(self.user_map)
-                    self.add_empty()
-
 
 
     def basic_setup(self):
@@ -69,6 +61,8 @@ class Labelers:
                 labels = np.array(map(int, row[3][1:-1].split(',')))
                 self.labels[self.user_map[email]][indices[img_num]] = 0
                 self.labels[self.user_map[email]][labels] = 1
+        self.q_labels = (self.labels>-1).astype('int')-2
+
 
     def add_labels(self, email, boolean_map):
         if email in self.user_map:
@@ -77,14 +71,14 @@ class Labelers:
             console.log("Error: new labels must be same shape as others")
         elif self.labels.shape[0]>0:
             self.labels = np.vstack((self.labels, boolean_map))
+            self.q_labels = np.vstack((self.q_labels, (boolean_map>-1).astype('int')-2))
             self.user_map[email] = len(self.user_map)
             self.rewards = np.vstack((self.rewards,np.array([1,1,2])))
-            self.add_empty()
         else:
             self.labels = np.array(boolean_map).reshape((1,self.n))
+            self.q_labels = (self.labels>-1).astype('int')-2
             self.user_map[email] = 0
             self.rewards = np.array([1,1,2]).reshape((1,3))
-            self.add_empty()
 
     def add_label_index(self, email, indices):
         new_booleans = np.zeros(self.n)
@@ -115,57 +109,35 @@ class Labelers:
         return np.where(all_ui>threshold)[0]
 
     def model_start(self, train_map, new_train):
-        uniques = train_map.unique_segs(20)
+        tr_indcs = train_map.unique_segs(20)
         for i in range(len(self.labels)):
-            good_indices = new_train[np.where(self.labels[i][uniques[new_train]]>-1)]
-            self.train_indcs[i]+=list(good_indices)
+            new_train_indcs = tr_indcs[new_train]
+            good_indices = new_train_indcs[np.where(self.labels[i,new_train_indcs]>-1)]
+            self.q_labels[i,good_indices] = self.labels[i,good_indices]
 
 
     def model_vote(self, train_map, new_train):
-        uniques = train_map.unique_segs(20)
+        tr_indcs = train_map.unique_segs(20)
+        new_train_indcs = tr_indcs[new_train]
         total_vote = np.zeros(len(new_train))
         count = np.zeros(len(new_train))
-        majority_vote = self.majority_vote()
-        results = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.labels[i], majority_vote[i], self.train_indcs[i], new_train) for i in range(len(self.labels)))
+        majority_vote = self.majority_vote(labels = self.q_labels)
+        results = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.q_labels[i,tr_indcs], majority_vote[tr_indcs], new_train) for i in range(len(self.labels)))
         for j in range(len(self.labels)):
-            good_indices = results[j][0]
-            bad_indices = results[j][1]
-            self.train_indcs[j]+=list(new_train[good_indices])
-            self.train_indcs[j]+=list(new_train[bad_indices])
-            total_vote[good_indices] += self.labels[j][uniques[new_train[good_indices]]]
-            total_vote[bad_indices] += (-1*self.labels[j][uniques[new_train[bad_indices]]]+1)
+            good_indices = results[j]
+            self.q_labels[j,new_train_indcs[good_indices]] = self.labels[j,new_train_indcs[good_indices]]
+            total_vote[good_indices] += self.q_labels[j][new_train_indcs[good_indices]]
             count[good_indices] += 1
-            count[bad_indices] += 1
+        print zip(total_vote.astype('int'), count.astype('int'))
+        print zip(np.sum(self.labels[:,new_train_indcs]>0, axis = 0).astype('int'),np.sum(self.labels[:,new_train_indcs]>=0, axis = 0).astype('int'))
+        print total_vote/count.astype('float')>=0.5
+        #print majority_vote[new_train_indcs]
+        majority_vote = self.majority_vote()
+        print majority_vote[new_train_indcs]
+        print (total_vote/count.astype('float')>=0.5) == (majority_vote[new_train_indcs])
+
         return total_vote/count.astype('float')>=0.5#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
         
-
-    def model_vote_serial(self, train_map, new_train):
-        #1 Create total_vote array of length label_indices
-        #2 Create count array of length label_indices
-        #For each labeler
-            #1 Train model on all current indices
-            #3 Predict labeler probs for new indices (probs)
-            #4 Usable indices are those whose prob is above the threshold (probs>.75)
-            #5 Add the indices for those valid probs to current indices
-            #6 Add those index labels to the total_vote and count arrays
-        #Return total_vote/count.astype('float')>0.5
-
-        uniques = train_map.unique_segs(20)
-        total_vote = np.zeros(len(new_train))
-        count = np.zeros(len(new_train))
-        for i in range(len(self.labels)):
-            new_model = ObjectClassifier()
-            indcs = np.array(self.train_indcs[i])
-            labels = (self.labels == self.majority_vote())[i][uniques]
-            new_model.fit(train_map, labels, indcs)
-            probs = new_model.predict_proba_segs(train_map, new_train)
-            good_indices = np.where((probs>0.75) & (self.labels[i][uniques[new_train]]>-1))
-            self.train_indcs[i]+=list(new_train[good_indices])
-            total_vote[good_indices] += self.labels[i][uniques[new_train[good_indices]]]
-            count[good_indices] += 1
-        print count
-        return total_vote/count.astype('float')>0.5
-
 
     def donmez_vote(self, label_indices, error, update = True):
         top_indices = self.top_labelers(error)
@@ -179,23 +151,22 @@ class Labelers:
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
             bcount = np.bincount(np.where(top_voters>=0)[0])
             self.rewards[top_indices[:bcount.shape[0]],2] += bcount
-            # NEED TO CHANGE THIS SO COUNT DOESNT INCREASE FOR -1s
-            # subtract np.sum(np.where(top_voters<0)[0]) from count
-            # real: self.rewards[...] += np.bincount(np.where(top_voters>=0)[0])
         return majority_vote
 
 
-    def majority_vote(self, label_indices = None, labeler_indices = None):
-        return self.probability(label_indices, labeler_indices)>=0.5
+    def majority_vote(self, label_indices = None, labeler_indices = None, labels = None):
+        labels = self.labels if labels is None else labels
+        return self.probability(label_indices, labeler_indices, labels)>=0.5
 
 
-    def probability(self, label_indices = None, labeler_indices = None):
+    def probability(self, label_indices = None, labeler_indices = None, labels = None):
+        labels = self.labels if labels is None else labels
         if label_indices is None:
             label_indices = np.arange(self.n)
         if labeler_indices is None:
-            labeler_indices = np.arange(self.labels.shape[0])
+            labeler_indices = np.arange(labels.shape[0])
         indcs = np.ix_(labeler_indices, label_indices)
-        return np.sum(self.labels[indcs]>0, axis = 0)/np.sum(self.labels[indcs]>=0, axis = 0).astype('float')
+        return np.sum(labels[indcs]>0, axis = 0)/np.sum(labels[indcs]>=0, axis = 0).astype('float')
 
 
     def individual_vote(self, label_indices):
