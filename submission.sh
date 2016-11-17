@@ -1,8 +1,9 @@
 #!/bin/bash
-#PBS -q longq
+#PBS -q mediumq
 #PBS -l select=1:ncpus=14
 #PBS -l walltime=16:00:00
 #PBS -e errors
+#PBS -j eo
 #PBS -J 0-8
 
 # NOTE
