@@ -153,7 +153,7 @@ class al:
 
 
 def run_al(i, n_runs, random, update):
-    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_2_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':

@@ -124,19 +124,11 @@ class Labelers:
         majority_vote = self.majority_vote(labels = self.q_labels)
         P = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.q_labels[i,tr_indcs], majority_vote[tr_indcs], new_train) for i in range(len(self.labels)))
         P = np.array(P)
-        print P
         best_labelers = np.argmax(P, axis = 0)
-        print best_labelers
         best_labels = self.labels[best_labelers,new_train_indcs]
-        print best_labels
-        self.q_labels[best_labelers,new_train_indcs] = best_labels
+        #self.q_labels[best_labelers,new_train_indcs] = best_labels
+        self.q_labels[:, new_train_indcs] = self.labels[:, new_train_indcs]
         majority_vote = self.majority_vote()
-        
-        print zip(np.sum(self.labels[:,new_train_indcs]>0, axis = 0).astype('int'),np.sum(self.labels[:,new_train_indcs]>=0, axis = 0).astype('int'))
-        print best_labels
-        print majority_vote[new_train_indcs]
-        print best_labels == (majority_vote[new_train_indcs])
-
         return best_labels#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
         
 
