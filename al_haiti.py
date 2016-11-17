@@ -113,7 +113,7 @@ class al:
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
             new_labs = self.labelers.majority_vote(train_segs[new_training])
-        elif self.updtae_type == "random":
+        elif self.update_type == "random":
             labelers = np.random.randint(0, len(self.labelers), len(new_training))
             new_labs = self.labelers[labelers, train_segs[new_training]]
         elif self.update_type == "email":
