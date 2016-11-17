@@ -13,8 +13,9 @@ def model_vote_help(train_map, labels, majority_vote, train_indcs, new_train):
     indcs = np.array(train_indcs)
     new_model.fit(train_map, (labels == majority_vote)[uniques], indcs)
     probs = new_model.predict_proba_segs(train_map, new_train)
-    good_indices = np.where((probs>0.3) & (labels[uniques[new_train]]>-1))
-    return good_indices
+    good_indices = np.where((probs>0.5) & (labels[uniques[new_train]]>-1))
+    bad_indices = np.where((probs<0.5) & (labels[uniques[new_train]]>-1))
+    return good_indices, bad_indices
 
 class Labelers:
     def __init__(self, n = 97710, basic_setup = True):
@@ -127,11 +128,15 @@ class Labelers:
         majority_vote = self.majority_vote()
         results = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.labels[i], majority_vote[i], self.train_indcs[i], new_train) for i in range(len(self.labels)))
         for j in range(len(self.labels)):
-            good_indices = results[j]
+            good_indices = results[j][0]
+            bad_indices = results[j][1]
             self.train_indcs[j]+=list(new_train[good_indices])
+            self.train_indcs[j]+=list(new_train[bad_indices])
             total_vote[good_indices] += self.labels[j][uniques[new_train[good_indices]]]
+            total_vote[bad_indices] += (-1*self.labels[j][uniques[new_train[bad_indices]]]+1)
             count[good_indices] += 1
-        return total_vote/count.astype('float')>=0.5
+            count[bad_indices] += 1
+        return total_vote/count.astype('float')>=0.5#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
         
 
     def model_vote_serial(self, train_map, new_train):
