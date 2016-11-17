@@ -26,13 +26,13 @@ class al:
         #self.test_progress()
 
     def set_params(self):
-        self.start_n    = 50
+        self.start_n    = 2000
         self.batch_size = 50
         self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_test/'
+        self.path       = 'big_start/'
         self.fprs       = []
         self.UIs        = []
 
@@ -113,6 +113,9 @@ class al:
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
             new_labs = self.labelers.majority_vote(train_segs[new_training])
+        elif self.updtae_type == "random":
+            labelers = np.random.randint(0, len(self.labelers), len(new_training))
+            new_labs = self.labelers[labelers, train_segs[new_training]]
         elif self.update_type == "email":
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
         elif self.update_type == "model":
@@ -150,7 +153,7 @@ class al:
 
 
 def run_al(i, n_runs, random, update):
-    next_al = al(postfix = '_{}_2_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':

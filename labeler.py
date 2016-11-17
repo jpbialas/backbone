@@ -12,8 +12,8 @@ def model_vote_help(train_map, q_labels, majority_vote, new_train):
     indcs = np.where(q_labels>-1)
     new_model.fit(train_map, (q_labels == majority_vote), indcs)
     probs = new_model.predict_proba_segs(train_map, new_train)
-    good_indices = np.where((probs>0.5) & (q_labels[new_train]>-2))
-    return good_indices
+    probs[np.where(q_labels[new_train]==-2)] = 0
+    return probs
 
 class Labelers:
     def __init__(self, n = 97710, basic_setup = True):
@@ -122,21 +122,22 @@ class Labelers:
         total_vote = np.zeros(len(new_train))
         count = np.zeros(len(new_train))
         majority_vote = self.majority_vote(labels = self.q_labels)
-        results = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.q_labels[i,tr_indcs], majority_vote[tr_indcs], new_train) for i in range(len(self.labels)))
-        for j in range(len(self.labels)):
-            good_indices = results[j]
-            self.q_labels[j,new_train_indcs[good_indices]] = self.labels[j,new_train_indcs[good_indices]]
-            total_vote[good_indices] += self.q_labels[j][new_train_indcs[good_indices]]
-            count[good_indices] += 1
-        print zip(total_vote.astype('int'), count.astype('int'))
-        print zip(np.sum(self.labels[:,new_train_indcs]>0, axis = 0).astype('int'),np.sum(self.labels[:,new_train_indcs]>=0, axis = 0).astype('int'))
-        print total_vote/count.astype('float')>=0.5
-        #print majority_vote[new_train_indcs]
+        P = Parallel(n_jobs = -1, verbose=1)(delayed(model_vote_help)(train_map, self.q_labels[i,tr_indcs], majority_vote[tr_indcs], new_train) for i in range(len(self.labels)))
+        P = np.array(P)
+        print P
+        best_labelers = np.argmax(P, axis = 0)
+        print best_labelers
+        best_labels = self.labels[best_labelers,new_train_indcs]
+        print best_labels
+        self.q_labels[best_labelers,new_train_indcs] = best_labels
         majority_vote = self.majority_vote()
+        
+        print zip(np.sum(self.labels[:,new_train_indcs]>0, axis = 0).astype('int'),np.sum(self.labels[:,new_train_indcs]>=0, axis = 0).astype('int'))
+        print best_labels
         print majority_vote[new_train_indcs]
-        print (total_vote/count.astype('float')>=0.5) == (majority_vote[new_train_indcs])
+        print best_labels == (majority_vote[new_train_indcs])
 
-        return total_vote/count.astype('float')>=0.5#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
+        return best_labels#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
         
 
     def donmez_vote(self, label_indices, error, update = True):
