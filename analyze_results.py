@@ -146,7 +146,7 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95):
         if test == TPR:
             min_i = test_i
             max_i = test_i+1
-        elif TPRs[test_i+1]<TPR:
+        elif test_i+1<len(TPRs) and TPRs[test_i+1]<TPR:
             min_i = test_i + 1
         else:
             max_i = test_i

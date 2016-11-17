@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -q mediumq
 #PBS -l select=1:ncpus=14
-#PBS -l walltime=16:00:00
+#PBS -l walltime=8:00:00
 #PBS -e errors
 #PBS -j eo
 #PBS -J 0-8
