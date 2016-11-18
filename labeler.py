@@ -47,7 +47,7 @@ class Labelers:
 
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels5.csv'
+        fn = 'damagelabels20/labels4.csv'
         indices = [np.arange(0,30354), np.arange(30354,67105),np.arange(67105, 97710)]
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
