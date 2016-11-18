@@ -26,13 +26,13 @@ class al:
         self.test_progress()
 
     def set_params(self):
-        self.start_n    = 400
+        self.start_n    = 50
         self.batch_size = 50
         self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'big_start/'
+        self.path       = 'al_5/'
         self.fprs       = []
         self.UIs        = []
 
@@ -120,6 +120,8 @@ class al:
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
         elif self.update_type == "model":
             new_labs = self.labelers.model_vote(self.train_map, new_training)
+        elif self.update_type == "model_2":
+            new_labs = self.labelers.model_vote(self.train_map, new_training, all = True)
 
         self.training_labels[new_training] = new_labs
 
@@ -152,12 +154,10 @@ class al:
 
 
 
-def run_al(i, n_runs, random, update):
-    next_al = al(postfix = '_{}_2_{}_{}'.format(update, random, i), random = random == "random", update = update)
+def run_al(i, random, update):
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
-    n_runs = 8
-    run_al(sys.argv[1], n_runs, sys.argv[2], sys.argv[3])
-    #Parallel(n_jobs=-1, verbose = 1)(delayed(run_al)(i,n_runs, sys.argv[1], sys.argv[2]) for i in range(n_runs))
+    run_al(sys.argv[1], sys.argv[2], sys.argv[3])
     

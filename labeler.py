@@ -47,7 +47,7 @@ class Labelers:
 
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels4.csv'
+        fn = 'damagelabels20/labels5.csv'
         indices = [np.arange(0,30354), np.arange(30354,67105),np.arange(67105, 97710)]
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
@@ -116,7 +116,7 @@ class Labelers:
             self.q_labels[i,good_indices] = self.labels[i,good_indices]
 
 
-    def model_vote(self, train_map, new_train):
+    def model_vote(self, train_map, new_train, all = False):
         tr_indcs = train_map.unique_segs(20)
         new_train_indcs = tr_indcs[new_train]
         total_vote = np.zeros(len(new_train))
@@ -126,10 +126,12 @@ class Labelers:
         P = np.array(P)
         best_labelers = np.argmax(P, axis = 0)
         best_labels = self.labels[best_labelers,new_train_indcs]
-        #self.q_labels[best_labelers,new_train_indcs] = best_labels
-        self.q_labels[:, new_train_indcs] = self.labels[:, new_train_indcs]
+        if all:
+            self.q_labels[:, new_train_indcs] = self.labels[:, new_train_indcs]
+        else:
+            self.q_labels[best_labelers,new_train_indcs] = best_labels
         majority_vote = self.majority_vote()
-        return best_labels#, np.sum(self.labels>=0, axis = 0)[uniques[new_train]] - count.astype('float')
+        return best_labels
         
 
     def donmez_vote(self, label_indices, error, update = True):
