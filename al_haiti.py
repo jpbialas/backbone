@@ -154,10 +154,12 @@ class al:
 
 
 
-def run_al(i, random, update):
+def run_al(i, update, random):
     next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
-    run_al(sys.argv[1], sys.argv[2], sys.argv[3])
+    options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('model_2', 'rf'), ('random', 'rf')]
+    option = options[sys.argv[2]]
+    run_al(sys.argv[1], option[0], option[1])
     
