@@ -125,14 +125,16 @@ class ObjectClassifier():
 
 
 def main_haiti():
+    from labeler import Labelers
     model      = ObjectClassifier(1)
     y          = Labelers().majority_vote()
+    y2         = Labelers().labeler('masexaue@mtu.edu')
     test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
     train      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
+    probs = model.fit_and_predict(train_map, test_map, y2[train_map.unique_segs(20)])
     g_truth = y[test_map.segmentations[20]]
     print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
@@ -180,7 +182,7 @@ def label_test():
 
 
 if __name__ == '__main__':
-    #main_haiti()
-    label_test()
+    main_haiti()
+    #label_test()
 
 

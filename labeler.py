@@ -106,7 +106,7 @@ class Labelers:
         all_ui = self.UI()        
         max_ui = np.max(all_ui)
         threshold = error*max_ui
-        return np.where(all_ui>threshold)[0]
+        return np.where(all_ui>=threshold)[0]
 
     def model_start(self, train_map, new_train):
         tr_indcs = train_map.unique_segs(20)
@@ -140,8 +140,8 @@ class Labelers:
         majority_vote = self.majority_vote(label_indices, top_indices)#np.sum(top_voters, axis = 0)/float(top_voters.shape[0])>=0.5
         if update:
             new_rewards = (top_voters == majority_vote)
-            bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
-            new_rewards = new_rewards+bonus
+            #bonus = ((new_rewards+top_voters)>1)*14 #Bonus for getting 1 correct
+            new_rewards = new_rewards#+bonus
             self.rewards[top_indices,0] += np.sum(new_rewards, axis = 1)
             self.rewards[top_indices,1] += np.sum(new_rewards**2, axis = 1)
             bcount = np.bincount(np.where(top_voters>=0)[0])
@@ -180,7 +180,7 @@ class Labelers:
 
 
     def show_majority_vote(self, disp_map, level = 20):
-        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = .2)
+        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = .6)
         self.show_img(img, 'Majority Vote')
         return img
 
@@ -253,10 +253,10 @@ def test():
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
     labelers.show_FPR_TPR()
-    labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
-    #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
+    #labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
+    labelers.show_labeler('masexaue@mtu.edu', haiti_map)
     #labelers.show_labeler('alex@renda.org', haiti_map)
-    #labelers.show_majority_vote(haiti_map)
+    labelers.show_majority_vote(haiti_map)
     #labelers.show_prob_vote(haiti_map)
     plt.show()
     #print labelers.emails

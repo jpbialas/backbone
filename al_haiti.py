@@ -32,13 +32,13 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_5/'
+        self.path       = 'al_temp/'
         self.fprs       = []
         self.UIs        = []
 
     def setup_map_split(self):
         self.train      = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
-        self.test       = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
+        self.test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2, 4096))
         self.haiti_map  = map_overlay.haiti_setup()
         self.train_map  = self.haiti_map.sub_map(self.train)
         self.test_map   = self.haiti_map.sub_map(self.test)
@@ -108,7 +108,7 @@ class al:
     def update_labels(self, new_training):
         train_segs = self.train_map.unique_segs(self.seg)
         if self.update_type == "donmez":
-            new_labs = self.labelers.donmez_vote(train_segs[new_training], 0.85, True)
+            new_labs = self.labelers.donmez_vote(train_segs[new_training], 1, True)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
@@ -129,10 +129,13 @@ class al:
     def test_progress(self):
         model = ObjectClassifier(verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
+        print self.labelers.rewards
+        print np.unique(training_sample), self.training_labels[np.unique(training_sample)], training_sample.shape, np.unique(training_sample).shape
+        print self.labelers.labeler('masexaue@mtu.edu')[self.train_map.unique_segs(self.seg)[np.unique(training_sample)]]
         model.fit(self.train_map, self.training_labels, training_sample)
         proba = model.predict_proba(self.test_map)
         g_truth = self.labelers.majority_vote()[self.test_map.segmentations[self.seg]]
-        n_labeled = np.where(self.training_labels != -1)[0].shape[0]
+        n_labeled = np.where(self.training_labels > -1)[0].shape[0]
         if self.show:
             fig, AUC = analyze_results.ROC(g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
             fig.savefig('{}ROC_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
