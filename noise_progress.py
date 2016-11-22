@@ -16,25 +16,6 @@ def indcs2bools(indcs, segs):
     seg_mask[indcs] = 1
     return seg_mask
 
-def plot(title, fn, p, cat, xaxis):
-    plt.figure(title)
-    data = np.loadtxt(p+cat[0]+fn+'.csv', delimiter = ',')
-    axis = xaxis[cat[2]]
-    if cat[2] < 2:
-        data = np.lib.pad(data, (0, 100-data.shape[0]), 'constant', constant_values = (0,data[-1]))
-    else:
-        data = np.lib.pad(data, (0, 50-data.shape[0]), 'constant', constant_values = (0,data[-1]))
-    if cat[2] != 2:
-        indcs = np.where(data != 0)[0]
-        data = data[indcs]
-        axis = xaxis[cat[2]][indcs]
-
-    plt.plot(axis*100, data, cat[3], label = cat[1])
-    plt.legend(loc = 0)
-    plt.title(title)
-    plt.xlim([0, 60])
-    plt.xlabel('Noise (%)')
-    plt.ylabel('AUC')
 
 def better_order(middle = 50):
     if middle == 50:
@@ -93,41 +74,39 @@ def xAxis():
     return seg_axis, px_axis, np.array(seg_sim_axis), np.array(px_sim_axis)
 
 
-def visualize():
-    axes = xAxis()
-    print axes[1][60]
-    p = 'ObjectNoiseProgress/'
-    cats = [('randomAppend_/', 'Obj Random Noise', 0, 'r--'), ('randomAppend_px_/', 'Px Random Noise', 1, 'b--')
-             #,('append_/', 'Obj Building Noise', 0, 'r-'),('append_px_/', 'Px Building Noise', 1, 'b-')
-              ,('sim_seg/', 'Obj Geospatial Noise', 2, 'r-'), ('sim_px/', 'Px Geospatial Noise', 3, 'b-')
-            ]
-              #('segment_no_e/', 'Object FewFeatures', 0), ('segment_basic/', 'Object Nothing', 0),
-              #('seg_over/', 'Seg Oversampling', 0), ('seg_over5/', 'Seg Oversampling MORE', 0), ('px_fewer/', 'Pixel Reduced Sample Size', 1),
-              #('px_fewer_random/','Px fewer random',1)]
-    
-    
-    for cat in cats:
-        plot('Effect of Noise on Rubble Classification', 'Damage_AUC', p, cat, axes)
-        #plot('Building AUCs', 'Building_AUC', p, cat, axes)
-        #plot('Damage Percents', 'Damage_percents', p, cat, xaxis)
-        #plot('Building Percents', 'Building_percents', p, cat, xaxis)
-        #plot('Damage Threshs', 'Damage_threshs', p, cat, xaxis)
-        #plot('Building Threshs', 'Building_threshs', p, cat,xaxis)
-
-
-
-        #d_thresh = np.loadtxt(p+'Damage_threshs.csv', delimiter = ',')
-        #b_thresh = np.loadtxt(p+'Building_threshs.csv', delimiter = ',')
-        #d_p = np.loadtxt(p+'Damage_percents.csv', delimiter = ',')
-        #b_p = np.loadtxt(p+'Building_percents.csv', delimiter = ',')
-    
+def tests(indcs = [0,1,2,3,4,5,6,7]):
+    n = len(indcs)
+    start_n = 50
+    batch = 50
+    total_segs = 32910.
+    auc_lim = total_segs
+    xaxes = xAxis()
+    all_methods = [('object','', 'blue', 100, 0), ('object', '_random', 'red', 100, 0), ('object', '_dilate', 'green', 50, 2)]
+    for method in all_methods:
+        fn = 'ObjectNoiseProgress2/Damage_AUC_{}{}_'.format(method[0], method[1])
+        x_axis = xaxes[method[4]]
+        ave = np.zeros(method[3])
+        all_plots = np.zeros((n, method[3]))
+        for i in indcs:
+            next_plot = np.load(fn+'{}.npy'.format(i))
+            all_plots[indcs.index(i)] = 100*next_plot
+        ave = np.mean(all_plots, axis = 0)
+        print all_plots
+        std_error = np.std(all_plots, axis = 0)/np.sqrt(n)
+        ax = plt.axes()
+        print x_axis.shape, ave.shape
+        plt.plot(x_axis, ave, method[2], label = '{} {}'.format(method[0], method[1]))
+        plt.fill_between(x_axis, ave-std_error, ave+std_error,alpha=0.5, edgecolor=method[2], facecolor=method[2])
+        plt.legend()
+        plt.title('Average AUC at 95% Recall over {} Runs'.format(n));plt.xlabel('% Segments Added (out of {})'.format(int(total_segs)));plt.ylabel('AUC (%)'); #plt.xlim([0, 100]), plt.ylim(0, 45)
+    print 'here'
     plt.show()
 
 
 
 
 class noise():
-    def __init__(self, run_num = 0, model_type = 'object', random = False, dilate = True):
+    def __init__(self, run_num = 0, model_type = 'px', random = False, dilate = True):
         assert(not (random and dilate))
         self.random = random
         self.model_type = model_type
@@ -183,3 +162,4 @@ if __name__ == '__main__':
     option = options[int(sys.argv[2])]
     n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1])
     n.run()
+    #tests()
