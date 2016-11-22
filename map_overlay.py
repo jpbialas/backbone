@@ -83,7 +83,7 @@ class Px_Map:
     
     def seg_convert(self, seg, arr):
         uniques = self.unique_segs(seg)
-        assert(uniques[-1]+1>arr.shape[0])
+        assert(uniques[-1]+1>=arr.shape[0])
         all_segs = np.zeros(uniques[-1]+1)
         all_segs[uniques] = arr
         return all_segs[self.segmentations[seg]]

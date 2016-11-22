@@ -32,7 +32,7 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_temp/'
+        self.path       = 'al_5/'
         self.fprs       = []
         self.UIs        = []
 

@@ -65,7 +65,9 @@ def color_edge(my_map, seg):
             Names of those features
     '''
     names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
-    p = os.path.join('features', "color_edge_{}.npy".format(my_map.segmentations[seg]))
+    
+    p = os.path.join('features', "color_edge_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], seg))
+
     if os.path.exists(p):
         data = np.load(p)
     else:
@@ -131,7 +133,8 @@ def hog(my_map, seg):
     names = []
     for i in range(bins):
         names.append('hog{}'.format(i))
-    p = os.path.join('features', "hog_seg_{}.npy".format(my_map.segmentations[seg]))
+    p = os.path.join('features', "color_edge_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], seg))
+    
     if os.path.exists(p):
         data = np.load(p)
     else:
@@ -160,7 +163,7 @@ def shapes(my_map, level):
             Names of those features
     '''
     names = np.array(['re{}'.format(level),'rf{}'.format(level),'ee{}'.format(level),'ef{}'.format(level)])
-    p = os.path.join('features', "aspect_extent_{}.npy".format(my_map.segmentations[level]))
+    p = os.path.join('features', "aspect_extent_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], level))
     if os.path.exists(p):
         data = np.load(p)
         data = np.clip(data, 0, 1)

@@ -13,16 +13,16 @@ from sklearn.externals.joblib import Parallel, delayed
 
 class ObjectClassifier():
 
-    def __init__(self, verbose = 0):
+    def __init__(self, NZ = True, verbose = 1):
         self.verbose   = verbose
-        self.haiti_constants()
+        self.NZ_constants() if NZ else haiti_constants()
 
 
     def NZ_constants(self):
         self.n_trees   = 85 
         self.base_seg  = 50
         self.segs      = [100]
-        self.even      = 2
+        self.even      = 1
         self.features  = sf.NZ_features 
 
     def haiti_constants(self):
@@ -72,7 +72,7 @@ class ObjectClassifier():
         v_print('starting fit', self.verbose)
         X = self.get_X(map_train)[indcs]
         y = labels[indcs]
-        samples = self.sample(y, self.even) 
+        samples = self.sample(y, self.even)
         self.model= RandomForestClassifier(n_estimators=self.n_trees, n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
@@ -81,7 +81,6 @@ class ObjectClassifier():
     def predict_proba(self, map_test):
         seg_probs = self.predict_proba_segs(map_test, None)
         px_probs = map_test.seg_convert(self.base_seg, seg_probs)
-        v_print('ending predict', self.verbose)
         return px_probs
 
     def predict_proba_segs(self, map_test, indcs = None):

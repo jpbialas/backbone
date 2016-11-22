@@ -1,4 +1,3 @@
-from map_overlay import MapOverlay
 import map_overlay
 import numpy as np
 import cv2
@@ -12,14 +11,10 @@ from convenience_tools import *
 
 class PxClassifier():
 
-    def __init__(self, n_estimators, n_jobs, n_segs = 265824, verbose = 1):
+    def __init__(self, n_estimators = 85, n_train = 265824, verbose = 0):
         self.verbose = verbose
-        #self.model = RandomForestClassifier(n_estimators, n_jobs, verbose = verbose)
+        self.n_train = n_train
         self.params = {
-            'n_train': n_segs,#19745,  #1% 265824
-            'frac_test' : 1,
-            'mask_train' : 'damage',
-            'mask_test' : 'damage',
             'edge_k' : 100,
             'hog_k' : 50,
             'nbins' : 16,
@@ -48,7 +43,7 @@ class PxClassifier():
             one_samples = np.random.choice(ones, nsamples/2)
             final_set = np.concatenate((zero_samples, one_samples))
         else:
-            final_set = np.random.random_integers(0,y_train.shape[0]-1, int(self.params['n_train']))
+            final_set = np.random.random_integers(0,y_train.shape[0]-1, n_samples)
         return final_set
 
 
@@ -62,18 +57,23 @@ class PxClassifier():
         #entropy, entropy_name = px_features.entr(new_map.bw_img, img_name = new_map.name)
 
         #glcm, glcm_name = px_features.GLCM(new_map.bw_img, 50, img_name = new_map.name)
-        if params == None:
-            params = self.params
-        rgb, rgb_name = px_features.normalized(new_map.getMapData(), img_name = new_map.name)
-        ave_rgb, ave_rgb_name = px_features.blurred(new_map.img, img_name = new_map.name)
-        edges, edges_name = px_features.edge_density(new_map.bw_img, params['edge_k'], img_name = new_map.name, amp = 1)
-        hog, hog_name = px_features.hog(new_map.bw_img, params['hog_k'], img_name = new_map.name, bins = params['nbins'])
-        max_d, max_d_names = px_features.bright_max_diff(new_map.img, params['edge_k'], img_name = new_map.name)
-        v_print('Concatenating', self.verbose)
-        data = np.concatenate((rgb, ave_rgb, edges, max_d, hog), axis = 1)
-        names = np.concatenate((rgb_name, ave_rgb_name, edges_name, max_d_names, hog_name))
-        v_print('Done Concatenating', self.verbose)
-        return data, names
+        if new_map.X is None:
+            if params == None:
+                params = self.params
+            rgb, rgb_name = px_features.normalized(new_map.getMapData(), img_name = new_map.name)
+            ave_rgb, ave_rgb_name = px_features.blurred(new_map.img, img_name = new_map.name)
+            edges, edges_name = px_features.edge_density(new_map.bw_img, params['edge_k'], img_name = new_map.name, amp = 1)
+            hog, hog_name = px_features.hog(new_map.bw_img, params['hog_k'], img_name = new_map.name, bins = params['nbins'])
+            max_d, max_d_names = px_features.bright_max_diff(new_map.img, params['edge_k'], img_name = new_map.name)
+            v_print('Concatenating', self.verbose)
+            data = np.concatenate((rgb, ave_rgb, edges, max_d, hog), axis = 1)
+            names = np.concatenate((rgb_name, ave_rgb_name, edges_name, max_d_names, hog_name))
+            v_print('Done Concatenating', self.verbose)
+            new_map.X = data
+            self.feat_names = names
+        else:
+            data = new_map.X
+        return data
 
 
 
@@ -86,56 +86,31 @@ class PxClassifier():
         v_print('done generating visuals', self.verbose)
 
 
-    def fit(self, map_train, label_name = None, custom_data = None):
-        if label_name is None:
-            label_name = self.params['mask_train']
-        if custom_data is None:
-            v_print('Generating Features', self.verbose)
-            X_train, feat_names = self.gen_features(map_train, self.params)
-            self.feat_names = feat_names
-            v_print('Done generating Features', self.verbose)
-        else:
-            X_train = custom_data
-        y_train =  map_train.getLabels(label_name)
-        n_train = y_train.shape[0]
-        train = self.sample(y_train, int(self.params['n_train']), self.params['EVEN'])
+    def fit(self, map_train, labels):
+        v_print('Generating Features', self.verbose)
+        X_train = self.gen_features(map_train, self.params)
+        v_print('Done generating Features', self.verbose)
+        train = self.sample(labels, int(self.n_train), self.params['EVEN'])
         v_print("Start Modelling", self.verbose)
-        self.model = RandomForestClassifier(n_estimators=85, n_jobs = -1, verbose = self.verbose)
-        self.model.fit(X_train[train], y_train[train])
+        self.model = RandomForestClassifier(n_estimators = n_estimators, n_jobs = -1, verbose = self.verbose)
+        self.model.fit(X_train[train], labels[train])
         v_print("Done Modelling", self.verbose)
 
 
-    def predict_proba(self, map_test, label_name = "Jared", load = True, custom_data = None):
-        v_print('Starting Predction', self.verbose)
-        img_num = map_test.name[-1]
-        self.test_name = analyze_results.gen_model_name("Px", label_name, self.params['EVEN'], img_num, False)
-        p = 'PXpredictions/'+self.test_name+'_probs.npy'
-        if os.path.exists(p) and load:
-            prediction_prob = np.load(p)
-        else:
-            if label_name is None:
-                label_name = self.params['mask_train']
-            if custom_data is None:
-                v_print('Starting test gen', self.verbose)
-                X_test, feat_names = self.gen_features(map_test, self.params)
-                v_print('Done test gen', self.verbose)
-            else:
-                X_test = custom_data
-            #y_test = map_test.getLabels(label_name)
-            #n_test = y_test.shape[0]
-            #ground_truth = y_test
-            prediction_prob = self.model.predict_proba(X_test)[:,1]
-            if self.params['frac_test'] == 1 and load:
-                np.save('PXpredictions/'+self.test_name+'_probs.npy', prediction_prob)
+    def predict_proba(self, map_test):
+        v_print('Starting test gen', self.verbose)
+        X_test = self.gen_features(map_test, self.params)
+        v_print('Done test gen', self.verbose)
+        prediction_prob = self.model.predict_proba(X_test)[:,1]
         v_print("Done with Prediction", self.verbose)
         return prediction_prob
 
-    def predict(self, map_test, label_name = "Jared", thresh = .5):
-        return self.predict_proba(map_test, label_name)>thresh
+    def predict(self, map_test, thresh = .5):
+        return self.predict_proba(map_test)>thresh
 
-    def fit_and_predict(self, map_train, map_test, label_name = "Jared"):
-        self.fit(map_train)
-        probs = self.predict_proba(map_test, label_name)
+    def fit_and_predict(self, map_train, map_test, labels):
+        self.fit(map_train, labels)
+        probs = self.predict_proba(map_test)
         return probs
 
     def feature_importance(self):
@@ -155,48 +130,8 @@ class PxClassifier():
 
 
 if __name__ == "__main__":
-    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
-    print ('done setting up')
-    model = PxClassifier(85,-1)
-    model.fit(map_train)
-    haiti_map = MapOverlay('haiti/haiti_1002003.tif')
-    probs = model.predict_proba(haiti_map, label_name = 'haiti')
-    plt.figure()
-    plt.imshow(probs.reshape((4096, 4096)), cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])
-    plt.show()
-    plt.imshow(haiti_map.mask_helper(haiti_map.img, probs.reshape((4096, 4096))>.5, opacity = 0.4))
-    plt.show()
+    pass
 
 
-    
-    '''
-    print ('setting up')
-    map_test, map_train = map_overlay.basic_setup([], label_name = "Luke")
-    print ('done setting up')
-    model = PxClassifier(85,-1)
-    pred_luke = model.fit_and_predict(map_train, map_test, label_name = 'Luke').reshape(map_test.img.shape[:2])
-    #np.savetxt('pred_luke.csv', pred_luke, delimiter = ',')
-
-    print ('setting up')
-    map_test, map_train = map_overlay.basic_setup([], label_name = "Jared")
-    print ('done setting up')
-    model = PxClassifier(85,-1)
-    pred_jared = model.fit_and_predict(map_train, map_test, label_name = 'Jared').reshape(map_test.img.shape[:2])
-    #np.savetxt('pred_jared.csv', pred_luke, delimiter = ',')
-    
-    plt.figure()
-    plt.imshow(pred_jared-pred_luke, cmap = 'seismic', norm = plt.Normalize(-1,1))
-    plt.xticks([]), plt.yticks([])
-
-    plt.figure()
-    plt.imshow(pred_jared, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])
-    plt.figure()
-    plt.imshow(pred_luke, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.xticks([]), plt.yticks([])
-
-    plt.show()
-    '''
     
 

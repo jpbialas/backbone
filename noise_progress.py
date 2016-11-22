@@ -4,6 +4,7 @@ import analyze_results
 import map_overlay
 import matplotlib.pyplot as plt
 import timeit
+import sys
 import numpy as np
 from convenience_tools import *
 
@@ -11,7 +12,7 @@ def indcs2bools(indcs, segs):
     nsegs = np.max(segs)+1
     seg_mask = np.zeros(nsegs)
     seg_mask[indcs] = 1
-    return seg_mask[segs]
+    return seg_mask
 
 def plot(title, fn, p, cat, xaxis):
     plt.figure(title)
@@ -123,334 +124,60 @@ def visualize():
 
 
 
+class noise():
+    def __init__(self, run_num = 0, model_type = 'object', random = False, dilate = True):
+        assert(not (random and dilate))
+        self.random = random
+        self.model_type = model_type
+        self.dilate = dilate
+        self.postfix = '_'+model_type
+        if random:
+            self.postfix+='_random'
+        elif dilate:
+            self.postfix+='_dilate'
+        self.postfix += '_{}'.format(run_num)
 
-def main_dilate():
-    k=5
-    p = 'ObjectNoiseProgress/sim_seg/'
-    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
-    test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
-    test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
+        self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
+        self.p = 'ObjectNoiseProgress2/'
+        self.map_2, self.map_3 = map_overlay.basic_setup([100], 50)
+        if random:
+            self.building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
+        else:
+            self.building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-3.csv').astype('int')
+        self.real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
+        test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
+        test_segs = self.map_2.segmentations[50].ravel().astype('int')
+        segs = self.map_2.segmentations[50]
+        self.damage_ground = indcs2bools(test_damage, test_segs)[segs].ravel()
+        self.iters = 50 if dilate else 100
+        self.order = better_order(self.iters/2)
+        self.damage_AUCs = np.zeros(self.iters)
 
-    test_segs = map_2.segmentations[50].ravel().astype('int')
-    train_segs = map_3.segmentations[50].ravel().astype('int')
-    damage_ground = indcs2bools(test_damage, test_segs)
-    building_ground = indcs2bools(test_buildings, test_segs)
-    damage_AUCs = []
-    building_AUCs = []
-    damage_threshs = []
-    building_threshs = []
-    damage_perecents = []
-    building_percents = []
-    model = ObjectClassifier(verbose = 0)
-    X, _ = model._get_X_y(map_3, "Jared", custom_labels = indcs2bools(real_damage, train_segs))
-    for i in range(50):
-        print 'Running noise level {} noise segs'.format(i/10.0)
-        new_training = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i)).astype('int')
-        tic=timeit.default_timer()
-        model = ObjectClassifier()
-        model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs))
-        prediction = model.predict_proba(map_2)
-        for j in range(k-1):
-            model = ObjectClassifier(verbose = 0)
-            model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs), custom_data = X)
-            prediction += model.predict_proba(map_2)
-        prediction /= k
+    def gen_training(self, i):
+        if self.dilate:
+            new_training = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i)).astype('int')
+        else:
+            new_training = np.concatenate((self.building_rando[:i*10], self.real_damage))
+        if self.model_type == 'px':
+            return self.map_2.mask_segments_by_indx(new_training, 50, False).ravel()
+        else:
+            return indcs2bools(new_training,self.map_3.segmentations[50])
 
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
-        d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
-        b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
-        damage_AUCs.append(d_AUC)
-        building_AUCs.append(b_AUC)
-        damage_threshs.append(d_thresh)
-        building_threshs.append(b_thresh)
-        damage_perecents.append(d_perc)
-        building_percents.append(b_perc)
-        pred_fig = plt.figure()
-        plt.imshow(prediction, cmap = 'seismic', norm = plt.Normalize(0,1))
-
-        pred_fig.savefig(p+'Prediction_{}.png'.format(i), format = 'png')
-        d_roc.savefig(p+'Damage_ROC_{}.png'.format(i), format = 'png')
-        b_roc.savefig(p+'Building_ROC_{}.png'.format(i), format = 'png')
-        np.savetxt(p+'Prediction_{}.csv'.format(i), prediction, delimiter = ',')
-
-        np.savetxt(p+'Building_ROC_FPRs_{}.csv'.format(i), b_FPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_FPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_TPRs_{}.csv'.format(i), b_TPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_TPRs_{}.csv'.format(i), d_TPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_Threshs_{}.csv'.format(i), b_Threshs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_Threshs, delimiter = ',')
-
-        np.savetxt(p+'Damage_AUC.csv', damage_AUCs, delimiter = ',')
-        np.savetxt(p+'Building_AUC.csv', building_AUCs, delimiter = ',')
-        np.savetxt(p+'Damage_threshs.csv', damage_threshs, delimiter = ',')
-        np.savetxt(p+'Building_threshs.csv', building_threshs, delimiter = ',')
-        np.savetxt(p+'Damage_percents.csv', damage_perecents, delimiter = ',')
-        np.savetxt(p+'Building_percents.csv', building_percents, delimiter = ',')
-
-        plt.close(pred_fig)
-        plt.close(d_roc)
-        plt.close(b_roc)
-        toc=timeit.default_timer()
-        print 'That run took {} seconds!'.format(toc-tic)
-
-def main_segs():
-    k = 3
-    order = better_order()
-
-    p = 'ObjectNoiseProgress/seg_over5/'
-    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-3.csv').astype('int')
-    real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
-    test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
-    test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50].ravel().astype('int')
-    damage_ground = indcs2bools(test_damage, test_segs)
-    building_ground = indcs2bools(test_buildings, test_segs)
-    damage_AUCs = np.zeros(100)
-    building_AUCs = np.zeros(100)
-    damage_threshs = np.zeros(100)
-    building_threshs = np.zeros(100)
-    damage_perecents = np.zeros(100)
-    building_percents = np.zeros(100)
-    model = ObjectClassifier(verbose = 0)
-    train_segs = map_3.segmentations[50].ravel().astype('int')
-    X, _ = model._get_X_y(map_3, "Jared", custom_labels = indcs2bools(real_damage, train_segs))
-
-    for i in range(100):
-        i = order[i]
-        print 'Running with {} noise segs'.format(i*10)
-        tic=timeit.default_timer()
-        new_training = np.concatenate((building_rando[:i*10], real_damage))
-        
-
-        model = ObjectClassifier()
-        model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs))
-        prediction = model.predict_proba(map_2)
-        for j in range(k-1):
-            print ('here')
-            model = ObjectClassifier(verbose = 0)
-            model.fit(map_3, custom_labels = indcs2bools(new_training, train_segs), custom_data = X)
-            prediction += model.predict_proba(map_2)
-        prediction /= k
-
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
-        d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
-        b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
-        damage_AUCs[i] = d_AUC
-        building_AUCs[i] = b_AUC
-        damage_threshs[i] = d_thresh
-        building_threshs[i] = b_thresh
-        damage_perecents[i] = d_perc
-        building_percents[i] = b_perc
-        pred_fig = plt.figure()
-        plt.imshow(prediction, cmap = 'seismic', norm = plt.Normalize(0,1))
-
-        pred_fig.savefig(p+'Prediction_{}.png'.format(i), format = 'png')
-        d_roc.savefig(p+'Damage_ROC_{}.png'.format(i), format = 'png')
-        b_roc.savefig(p+'Building_ROC_{}.png'.format(i), format = 'png')
-        np.savetxt(p+'Prediction_{}.csv'.format(i), prediction, delimiter = ',')
-
-        np.savetxt(p+'Building_ROC_FPRs_{}.csv'.format(i), b_FPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_FPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_TPRs_{}.csv'.format(i), b_TPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_TPRs_{}.csv'.format(i), d_TPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_Threshs_{}.csv'.format(i), b_Threshs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_Threshs, delimiter = ',')
-
-        np.savetxt(p+'Damage_AUC.csv', damage_AUCs, delimiter = ',')
-        np.savetxt(p+'Building_AUC.csv', building_AUCs, delimiter = ',')
-        np.savetxt(p+'Damage_threshs.csv', damage_threshs, delimiter = ',')
-        np.savetxt(p+'Building_threshs.csv', building_threshs, delimiter = ',')
-        np.savetxt(p+'Damage_percents.csv', damage_perecents, delimiter = ',')
-        np.savetxt(p+'Building_percents.csv', building_percents, delimiter = ',')
-
-        plt.close(pred_fig)
-        plt.close(d_roc)
-        plt.close(b_roc)
-        toc=timeit.default_timer()
-        print 'That run took {} seconds!'.format(toc-tic)
-
-def main_dilate_px():
-    k = 1
-    order = better_order(25)
-    print order
-
-    p = 'ObjectNoiseProgress/sim_px/'
-    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
-    test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
-    test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50].ravel().astype('int')
-    damage_ground = indcs2bools(test_damage, test_segs)
-    building_ground = indcs2bools(test_buildings, test_segs)
-    damage_AUCs = np.zeros(50)
-    building_AUCs = np.zeros(50)
-    damage_threshs = np.zeros(50)
-    building_threshs = np.zeros(50)
-    damage_perecents = np.zeros(50)
-    building_percents = np.zeros(50)
-    #model = ObjectClassifier(verbose = 0)
-    #X, _ = model._get_X_y(map_3, "Jared", custom_labels = real_damage)
-    model = PxClassifier(85, -1)
-    X3,_ = model.gen_features(map_3)
-    X2,_ = model.gen_features(map_2)
-    for i in range(50):
-
-        i = order[i]
-        print 'Running with {} noise segs'.format(i*10)
-        tic=timeit.default_timer()
-        new_training = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i)).astype('int')
-        
-        map_3.new_seg_mask(new_training, 50, 'damage')
-        model = PxClassifier(85, -1, verbose = 0)
-        model.fit(map_3, custom_data = X3)
-        prediction = model.predict_proba(map_2, load = False, custom_data = X2)
-        #model = ObjectClassifier()
-        #model.fit(map_3, custom_labels = new_training)
-        #prediction = model.predict_proba(map_2)
-        for j in range(k-1):
-            model = PxClassifier(85, -1, verbose = 0)
-            model.fit(map_3, custom_data = X3)
-            prediction += model.predict_proba(map_2, load = False, custom_data = X2)
-            #model = ObjectClassifier(verbose = 0)
-            #model.fit(map_3, custom_labels = new_training, custom_data = X)
-            #prediction += model.predict_proba(map_2)
-        prediction /= k
-        prediction = prediction.reshape((map_2.rows, map_2.cols))
-
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
-        d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
-        b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
-        damage_AUCs[i] = d_AUC
-        building_AUCs[i] = b_AUC
-        damage_threshs[i] = d_thresh
-        building_threshs[i] = b_thresh
-        damage_perecents[i] = d_perc
-        building_percents[i] = b_perc
-        pred_fig = plt.figure()
-        plt.imshow(prediction, cmap = 'seismic', norm = plt.Normalize(0,1))
-
-        pred_fig.savefig(p+'Prediction_{}.png'.format(i), format = 'png')
-        d_roc.savefig(p+'Damage_ROC_{}.png'.format(i), format = 'png')
-        b_roc.savefig(p+'Building_ROC_{}.png'.format(i), format = 'png')
-        np.savetxt(p+'Prediction_{}.csv'.format(i), prediction, delimiter = ',')
-
-        np.savetxt(p+'Building_ROC_FPRs_{}.csv'.format(i), b_FPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_FPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_TPRs_{}.csv'.format(i), b_TPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_TPRs_{}.csv'.format(i), d_TPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_Threshs_{}.csv'.format(i), b_Threshs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_Threshs, delimiter = ',')
-
-        np.savetxt(p+'Damage_AUC.csv', damage_AUCs, delimiter = ',')
-        np.savetxt(p+'Building_AUC.csv', building_AUCs, delimiter = ',')
-        np.savetxt(p+'Damage_threshs.csv', damage_threshs, delimiter = ',')
-        np.savetxt(p+'Building_threshs.csv', building_threshs, delimiter = ',')
-        np.savetxt(p+'Damage_percents.csv', damage_perecents, delimiter = ',')
-        np.savetxt(p+'Building_percents.csv', building_percents, delimiter = ',')
-
-        plt.close(pred_fig)
-        plt.close(d_roc)
-        plt.close(b_roc)
-        toc=timeit.default_timer()
-        print 'That run took {} seconds!'.format(toc-tic)
-
-def main():
-    k = 1
-    order = better_order()
-    print order
-
-    p = 'ObjectNoiseProgress/px_fewer_random/'
-    map_2, map_3 = map_overlay.basic_setup([100], 50, label_name = "Jared")
-    building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
-    real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
-    test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
-    test_buildings = np.loadtxt('damagelabels50/all_buildings-3-2.csv', delimiter = ',').astype('int')
-    test_segs = map_2.segmentations[50].ravel().astype('int')
-    damage_ground = indcs2bools(test_damage, test_segs)
-    building_ground = indcs2bools(test_buildings, test_segs)
-    damage_AUCs = np.zeros(100)
-    building_AUCs = np.zeros(100)
-    damage_threshs = np.zeros(100)
-    building_threshs = np.zeros(100)
-    damage_perecents = np.zeros(100)
-    building_percents = np.zeros(100)
-    #model = ObjectClassifier(verbose = 0)
-    #X, _ = model._get_X_y(map_3, "Jared", custom_labels = real_damage)
-    model = PxClassifier(85, -1)
-    X3,_ = model.gen_features(map_3)
-    X2,_ = model.gen_features(map_2)
-    for i in range(100):
-        i = order[i]
-        print 'Running with {} noise segs'.format(i*10)
-        tic=timeit.default_timer()
-        new_training = np.concatenate((building_rando[:i*10], real_damage))
-        
-        map_3.new_seg_mask(new_training, 50, 'damage')
-        model = PxClassifier(85, -1, n_segs = 1442+10*i, verbose = 0)
-        print 'here', 1442+10*i
-        model.fit(map_3, custom_data = X3)
-        prediction = model.predict_proba(map_2, load = False, custom_data = X2)
-        #model = ObjectClassifier()
-        #model.fit(map_3, custom_labels = new_training)
-        #prediction = model.predict_proba(map_2)
-        for j in range(k-1):
-            model = PxClassifier(85, -1, n_segs = 1442+10*i, verbose = 0)
-            model.fit(map_3, custom_data = X3)
-            prediction += model.predict_proba(map_2, load = False, custom_data = X2)
-            #model = ObjectClassifier(verbose = 0)
-            #model.fit(map_3, custom_labels = new_training, custom_data = X)
-            #prediction += model.predict_proba(map_2)
-        prediction /= k
-        prediction = prediction.reshape((map_2.rows, map_2.cols))
-
-        d_roc, d_AUC, d_thresh, d_FPRs, d_TPRs, d_Threshs = analyze_results.ROC(damage_ground, prediction, model.test_name, save = False)
-        b_roc, b_AUC, b_thresh, b_FPRs, b_TPRs, b_Threshs = analyze_results.ROC(building_ground, prediction, model.test_name+' building', save = False)
-        d_perc = analyze_results.average_class_prob(map_2, damage_ground, prediction, model.test_name)
-        b_perc = analyze_results.average_class_prob(map_2, building_ground, prediction, model.test_name)
-        damage_AUCs[i] = d_AUC
-        building_AUCs[i] = b_AUC
-        damage_threshs[i] = d_thresh
-        building_threshs[i] = b_thresh
-        damage_perecents[i] = d_perc
-        building_percents[i] = b_perc
-        pred_fig = plt.figure()
-        plt.imshow(prediction, cmap = 'seismic', norm = plt.Normalize(0,1))
-
-        pred_fig.savefig(p+'Prediction_{}.png'.format(i), format = 'png')
-        d_roc.savefig(p+'Damage_ROC_{}.png'.format(i), format = 'png')
-        b_roc.savefig(p+'Building_ROC_{}.png'.format(i), format = 'png')
-        np.savetxt(p+'Prediction_{}.csv'.format(i), prediction, delimiter = ',')
-
-        np.savetxt(p+'Building_ROC_FPRs_{}.csv'.format(i), b_FPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_FPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_TPRs_{}.csv'.format(i), b_TPRs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_TPRs_{}.csv'.format(i), d_TPRs, delimiter = ',')
-        np.savetxt(p+'Building_ROC_Threshs_{}.csv'.format(i), b_Threshs, delimiter = ',')
-        np.savetxt(p+'Damage_ROC_FPRs_{}.csv'.format(i), d_Threshs, delimiter = ',')
-
-        np.savetxt(p+'Damage_AUC.csv', damage_AUCs, delimiter = ',')
-        np.savetxt(p+'Building_AUC.csv', building_AUCs, delimiter = ',')
-        np.savetxt(p+'Damage_threshs.csv', damage_threshs, delimiter = ',')
-        np.savetxt(p+'Building_threshs.csv', building_threshs, delimiter = ',')
-        np.savetxt(p+'Damage_percents.csv', damage_perecents, delimiter = ',')
-        np.savetxt(p+'Building_percents.csv', building_percents, delimiter = ',')
-
-        plt.close(pred_fig)
-        plt.close(d_roc)
-        plt.close(b_roc)
-        toc=timeit.default_timer()
-        print 'That run took {} seconds!'.format(toc-tic)
+    def run(self):
+        model = self.model_con()
+        for i in range(self.iters):
+            i = self.order[i]
+            print 'Running with {} noise segs'.format(i*10)
+            new_training = self.gen_training(i)
+            pred = model.fit_and_predict(self.map_3, self.map_2, labels = new_training)
+            d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
+            self.damage_AUCs[i] = d_AUC
+            np.save('{}Damage_AUC{}.npy'.format(self.p, self.postfix), self.damage_AUCs)
+            plt.close(d_roc)
 
 
 if __name__ == '__main__':
-    #main()
-    #test()
-    #main_segs()
-    #main_dilate()
-    #main_dilate_px()
-    visualize()
+    options = [(False, False), (True, False), (False, True)]
+    option = options[int(sys.argv[2])]
+    n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1])
+    n.run()
