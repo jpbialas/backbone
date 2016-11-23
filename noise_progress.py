@@ -1,5 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 from object_model import ObjectClassifier
 from px_model import PxClassifier
 import analyze_results
@@ -140,15 +140,16 @@ class noise():
         else:
             new_training = np.concatenate((self.building_rando[:i*10], self.real_damage))
         if self.model_type == 'px':
-            return self.map_2.mask_segments_by_indx(new_training, 50, False).ravel()
+            return self.map_3.mask_segments_by_indx(new_training, 50, False).ravel()
         else:
             return indcs2bools(new_training,self.map_3.segmentations[50])
 
     def run(self):
         model = self.model_con()
         for i in range(self.iters):
-            i = self.order[i]
+            i = self.order[1]
             print 'Running with {} noise segs'.format(i*10)
+            pred = np.load('PXpredictions/Px_Jared_2_probs.npy')
             new_training = self.gen_training(i)
             pred = model.fit_and_predict(self.map_3, self.map_2, labels = new_training)
             d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')

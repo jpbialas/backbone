@@ -137,7 +137,16 @@ class PxClassifier():
 
 
 if __name__ == "__main__":
-    pass
+    map_2, map_3 = map_overlay.basic_setup()
+    model = PxClassifier()
+    real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
+    labels = map_3.mask_segments_by_indx(real_damage, 50, False)
+    labels = labels.reshape(map_3.shape[:2])
+    plt.imshow(labels)
+    plt.show()
+    probs = model.fit_and_predict(map_3, map_2, labels.ravel())
+    plt.imshow(probs.reshape(map_2.shape[:2]))
+    plt.show()
 
 
     
