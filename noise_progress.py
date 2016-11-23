@@ -158,8 +158,8 @@ class noise():
 
 
 if __name__ == '__main__':
-    '''options = [(False, False), (True, False), (False, True)]
+    options = [(False, False), (True, False), (False, True)]
     option = options[int(sys.argv[2])]
     n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1])
-    n.run()'''
-    tests()
+    n.run()
+    #tests()
