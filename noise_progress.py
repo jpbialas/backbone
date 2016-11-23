@@ -147,9 +147,8 @@ class noise():
     def run(self):
         model = self.model_con()
         for i in range(self.iters):
-            i = self.order[1]
+            i = self.order[i]
             print 'Running with {} noise segs'.format(i*10)
-            pred = np.load('PXpredictions/Px_Jared_2_probs.npy')
             new_training = self.gen_training(i)
             pred = model.fit_and_predict(self.map_3, self.map_2, labels = new_training)
             d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
@@ -159,8 +158,8 @@ class noise():
 
 
 if __name__ == '__main__':
-    options = [(False, False), (True, False), (False, True)]
+    '''options = [(False, False), (True, False), (False, True)]
     option = options[int(sys.argv[2])]
     n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1])
-    n.run()
-    #tests()
+    n.run()'''
+    tests()
