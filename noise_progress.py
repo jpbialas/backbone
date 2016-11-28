@@ -1,8 +1,8 @@
-from object_model import ObjectClassifier
-from px_model import PxClassifier
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from object_model import ObjectClassifier
+from px_model import PxClassifier
 import analyze_results
 import map_overlay
 import sys
