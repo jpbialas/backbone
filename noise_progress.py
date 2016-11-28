@@ -45,6 +45,7 @@ def better_order(middle = 50):
 
 
 def xAxis():
+    '''
     segs = np.load('processed_segments/shapefilewithfeatures003-003-50.npy').astype('int')
     n_segs = np.max(segs)+1
     building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-3.csv').astype('int')
@@ -55,16 +56,17 @@ def xAxis():
     for i in range(100):
         all_indcs[building_rando[:i*10]] = 1
         building_count = np.sum(all_indcs[segs])
-        px_axis[i] = building_count/(segs.shape[0]*segs.shape[1])#(damage_count+building_count)
-        seg_axis[i] = i*10.0/n_segs#(i*10+real_damage.shape[0])
+        px_axis[i] = building_count/(damage_count+building_count)#(segs.shape[0]*segs.shape[1])#
+        seg_axis[i] = i*10.0/(i*10+real_damage.shape[0])#n_segs#
     seg_sim_axis, px_sim_axis = [], []
     for i in range(50):
         noise = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i), delimiter = ',').astype('int')
         noise_count = np.sum(indcs2bools(noise, segs)[segs])
-        px_sim_axis.append((noise_count-damage_count)/(segs.shape[0]*segs.shape[1]))
-        seg_sim_axis.append((noise.shape[0]-real_damage.shape[0])/float(n_segs))
-    return seg_axis, px_axis, np.array(seg_sim_axis), np.array(px_sim_axis)
-
+        px_sim_axis.append((noise_count-damage_count)/(damage_count+building_count))
+        seg_sim_axis.append((noise.shape[0]-real_damage.shape[0])/float((i*10+real_damage.shape[0])))
+    print seg_axis, px_axis, np.array(seg_sim_axis), np.array(px_sim_axis)
+    return seg_axis, px_axis, np.array(seg_sim_axis), np.array(px_sim_axis)'''
+    return np.array([0, 0.01367989, 0.02699055, 0.03994674, 0.05256242, 0.06485084, 0.07682458, 0.08849558, 0.09987516, 0.11097411, 0.12180268, 0.13237064, 0.14268728, 0.15276146, 0.16260163, 0.17221584, 0.1816118,  0.19079686, 0.19977802, 0.20856202, 0.21715527, 0.22556391, 0.23379384, 0.24185068, 0.24973985, 0.25746653, 0.26503568, 0.27245207, 0.27972028, 0.28684471, 0.29382958, 0.30067895, 0.30739673, 0.31398668, 0.3204524,  0.32679739, 0.33302498, 0.33913841, 0.34514078, 0.3510351,  0.35682426, 0.36251105, 0.36809816, 0.37358818, 0.37898363, 0.38428693, 0.38950042, 0.39462636, 0.39966694, 0.40462428, 0.40950041, 0.41429732, 0.41901692, 0.42366107, 0.42823156, 0.43273013, 0.43715847, 0.4415182,  0.44581091, 0.45003814, 0.45420136, 0.45830203, 0.46234154, 0.46632124, 0.47024247, 0.47410649, 0.47791455, 0.48166786, 0.48536759, 0.48901488, 0.49261084, 0.49615653, 0.49965302, 0.50310131, 0.5065024,  0.50985724, 0.51316678, 0.51643192, 0.51965356, 0.52283256, 0.52596976, 0.52906597, 0.532122, 0.53513862, 0.53811659, 0.54105665, 0.54395952, 0.5468259,  0.54965646, 0.55245189, 0.55521283, 0.55793991, 0.56063376, 0.56329497, 0.56592414, 0.56852184, 0.57108864, 0.57362507, 0.57613169, 0.578609]), np.array([0, 0.02385659, 0.03839607, 0.05505652, 0.07674098, 0.09819899, 0.11572629, 0.12782714, 0.13711813, 0.14721884, 0.17071743, 0.18050659, 0.18579152, 0.1965988,  0.2092049,  0.22343498, 0.23323942, 0.25122325, 0.26362742, 0.27572874, 0.28618251, 0.29373743, 0.30236008, 0.31565051, 0.33840805, 0.34528749, 0.3528892,  0.36051907, 0.37051948, 0.37771164, 0.3885556,  0.39763184, 0.40465691, 0.41293849, 0.41699841, 0.42413299, 0.42925339, 0.4347889,  0.43925886, 0.4456093,  0.45609541, 0.46067423, 0.46472449, 0.47009686, 0.47312196, 0.4777752,  0.4896882,  0.49366306, 0.49750815, 0.50360604, 0.50596803, 0.50890783, 0.5143787,  0.52031638, 0.52298996, 0.52671848, 0.53111845, 0.53731, 0.54291392, 0.5452255, 0.55240776, 0.55538041, 0.55800223, 0.56074653, 0.56449691, 0.56817298, 0.5721435,  0.57421226, 0.57695664, 0.57971603, 0.58387407, 0.58671933, 0.58810999, 0.59141547, 0.59518481, 0.59896241, 0.60210489, 0.60525707, 0.60854513, 0.61170765, 0.61340956, 0.61500207, 0.61879849, 0.62060129, 0.62261337, 0.62675238, 0.63023562, 0.63174326, 0.63459213, 0.63740854, 0.63877041, 0.64055724, 0.64479332, 0.64648391, 0.64943738, 0.65160516, 0.65456459, 0.6561598,  0.65861667, 0.66138956]), np.array([ 0, 0.00136799, 0.00134953, 0.00266312, 0.00919842, 0.02204929, 0.04481434, 0.06321113, 0.09363296, 0.11837238, 0.16077954, 0.19614922, 0.23543401, 0.27379553, 0.30894309, 0.34213548, 0.38024972, 0.39842873, 0.42841287, 0.4687157,  0.50380022, 0.53168636, 0.56216791, 0.58675079, 0.60874089, 0.6323378,  0.64627931, 0.66094854, 0.68231768, 0.6983185, 0.72184133, 0.73132881, 0.74735831, 0.76688868, 0.78416588, 0.80672269, 0.81498612, 0.83318057, 0.85013624, 0.85688569, 0.86529884, 0.87621574, 0.88168273, 0.8931364,  0.9121447,  0.92143467, 0.92633362, 0.93282955, 0.94254788, 0.95540875]), np.array([ 0, 0.00454937, 0.00454937, 0.00545196, 0.00981025, 0.02556343, 0.04387587, 0.05589758, 0.08115702, 0.1065527,  0.14522988, 0.17869773, 0.21482793, 0.24709819, 0.27874613, 0.31233959, 0.34483815, 0.36034667, 0.38980319, 0.42484095, 0.46206155, 0.4879343,  0.51742191, 0.55024289, 0.57195416, 0.59625249, 0.62025133, 0.64165163, 0.66526996, 0.68864647, 0.72090527, 0.7344159,  0.75864549, 0.78546052, 0.81015492, 0.83637954, 0.85394773, 0.88142027, 0.90442322, 0.92246685, 0.94572593, 0.96694294, 0.98128169, 1.00157769, 1.03420351, 1.06658137, 1.08306039, 1.09708819, 1.12031413, 1.14479249])
 
 def tests(indcs = [0,1,2,3,4,5,6,7]):
     import matplotlib.pyplot as plt
@@ -74,8 +76,9 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
     total_segs = 32910.
     auc_lim = total_segs
     xaxes = xAxis()
-    all_methods = [('object','', 'blue', 100, 0), ('object', '_random', 'red', 100, 0), ('object', '_dilate', 'green', 50, 2), \
-                    ('px','', 'cyan', 100, 1), ('px', '_random', 'magenta', 100, 1), ('px', '_dilate', 'teal', 50, 3)]
+    all_methods = [('object','', 'blue', 100, 0), ('object', '_random', 'red', 100, 0), \
+                    ('px','', 'cyan', 100, 1), ('px', '_random', 'magenta', 100, 1), \
+                    ('object','_minimal', 'brown', 100, 0), ('object', '_random_minimal', 'yellow', 100, 0)]
     for method in all_methods:
         fn = 'ObjectNoiseProgress2/Damage_AUC_{}{}_'.format(method[0], method[1])
         ave = np.zeros(method[3])
@@ -85,18 +88,19 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
             all_plots[indcs.index(i)] = 100*next_plot
         valid = np.where(np.min(all_plots, axis = 0) > 0)[0]
         ave = np.mean(all_plots, axis = 0)[valid]
+        #ave = ave+(100-ave[0])
         x_axis = 100*xaxes[method[4]][valid]
         std_error = (np.std(all_plots, axis = 0)/np.sqrt(n))[valid]
         ax = plt.axes()
         plt.plot(x_axis, ave, method[2], label = '{} {}'.format(method[0], method[1]))
         plt.fill_between(x_axis, ave-std_error, ave+std_error,alpha=0.5, edgecolor=method[2], facecolor=method[2])
-        plt.legend()
-        plt.title('Average AUC over {} Runs'.format(n));plt.xlabel('% Noise'.format(int(total_segs)));plt.ylabel('AUC (%)'); plt.xlim([0, 5])#, plt.ylim(0, 45)
+        plt.legend(loc = 0)
+        plt.title('Average AUC over {} Runs'.format(n));plt.xlabel('% Noise'.format(int(total_segs)));plt.ylabel('AUC (%)'); plt.xlim([0, 100]), plt.ylim(70, 100)
     plt.show()
 
 
 class noise():
-    def __init__(self, run_num = 0, model_type = 'object', random = False, dilate = True, minimal = True):
+    def __init__(self, run_num = 0, model_type = 'px', random = False, dilate = True, minimal = True):
         assert(not (random and dilate))
         self.model_type = model_type
         self.dilate = dilate
@@ -105,8 +109,10 @@ class noise():
             self.postfix+='_random'
         elif dilate:
             self.postfix+='_dilate'
-        if minimal:
+        if minimal and model_type == 'object':
             self.postfix+='_minimal'
+        elif minimal and model_type == 'px':
+            self.postfix+='_fewer'
         self.postfix += '_{}'.format(run_num)
         self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
         self.p = 'ObjectNoiseProgress2/'

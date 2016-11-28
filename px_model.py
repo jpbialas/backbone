@@ -41,8 +41,8 @@ class PxClassifier():
             ones = np.where(labels == 1)[0]
             n_ones = np.shape(ones)[0]
             n_min = np.min((n_zeros, n_ones))
-            zero_samples = np.random.choice(zeros, n_min/2)
-            one_samples = np.random.choice(ones, n_min/2)
+            zero_samples = np.random.choice(zeros, n_min/1000)
+            one_samples = np.random.choice(ones, n_min/1000)
             final_set = np.concatenate((zero_samples, one_samples))
         else:
             final_set = np.random.random_integers(0,y_train.shape[0]-1, n_samples)
