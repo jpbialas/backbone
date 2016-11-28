@@ -1,5 +1,8 @@
 from object_model import ObjectClassifier
 from px_model import PxClassifier
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import analyze_results
 import map_overlay
 import sys
@@ -94,9 +97,6 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
 
 class noise():
     def __init__(self, run_num = 0, model_type = 'object', random = False, dilate = True, minimal = True):
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
         assert(not (random and dilate))
         self.model_type = model_type
         self.dilate = dilate
