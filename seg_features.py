@@ -211,7 +211,28 @@ def shapes(my_map, level):
             data[i,3] = ellipse_fit
         np.save(p, data)
     return data, names
-    
+ 
+def NZ_minimal(my_map, base_seg, seg_levels):   
+    img = my_map.img
+    img_num = my_map.name[-1]
+    h,w,_ = img.shape
+    segs = my_map.segmentations[base_seg].ravel().astype('int')
+    n_segs = int(np.max(segs))
+    pbar = custom_progress()
+    color_data, color_names = color_edge(my_map, base_seg)
+    hog_data, hog_names = hog(my_map, base_seg)
+    data = np.concatenate((hog_data, color_data), axis = 1)
+    names = np.concatenate((hog_names, color_names), axis = 0)
+    if len(seg_levels)>0:
+        for seg in seg_levels:
+            segmentation = my_map.segmentations[seg].ravel().astype('int')
+            m_segs = int(np.max(segmentation))
+            convert = np.zeros(n_segs+1).astype('int')
+            convert[segs] = segmentation
+            color_data, color_names = color_edge(my_map, seg)
+            data = np.concatenate((color_data[convert], data), axis = 1)
+            names = np.concatenate((color_names, names), axis = 0)
+    return data, names
 
 def NZ_features(my_map, base_seg, seg_levels, ecognition = True):
     '''

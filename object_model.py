@@ -23,7 +23,7 @@ class ObjectClassifier():
         self.base_seg  = 50
         self.segs      = [100]
         self.even      = 1
-        self.features  = sf.NZ_features 
+        self.features  = sf.NZ_minimal#NZ_features 
 
     def haiti_constants(self):
         self.n_trees   = 200
