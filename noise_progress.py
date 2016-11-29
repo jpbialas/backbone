@@ -107,14 +107,14 @@ class noise():
         self._setup_postfix(run_num, model_type, random, dilate, minimal)
         self._setup_map(random)
         self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
-        self.p = 'ObjectNoiseProgress2/'
+        self.p = 'ObjectNoiseProgress3/'
         self.iters = 50 if dilate else 100
         self.order = better_order(self.iters/2)
         self.damage_AUCs = np.zeros(self.iters)
 
     def _setup_map(self, random):
         self.maps = [0,0,0,0]
-        self.tr, self.te = 3, 2
+        self.tr, self.te = 2,3
         self.maps[2:4] = list(map_overlay.basic_setup([100], 50))
         if random:
             self.building_rando = np.loadtxt('damagelabels50/non_damage_random-3-{}.csv'.format(self.tr)).astype('int')
