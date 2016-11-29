@@ -104,6 +104,28 @@ class noise():
         assert(not (random and dilate))
         self.model_type = model_type
         self.dilate = dilate
+        self._setup_postfix(model_type, random, dilate, minimal)
+        self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
+        self.p = 'ObjectNoiseProgress2/'
+        self.damage_ground = indcs2bools(test_damage, test_segs)[segs].ravel()
+        self.iters = 50 if dilate else 100
+        self.order = better_order(self.iters/2)
+        self.damage_AUCs = np.zeros(self.iters)
+
+    def _setup_map(self, random):
+        maps = [0,0,0,0]
+        self.tr, self.te = 3, 2
+        maps[2:4] = list(map_overlay.basic_setup([100], 50))
+        if random:
+            self.building_rando = np.loadtxt('damagelabels50/non_damage_random-3-{}.csv'.format(self.tr)).astype('int')
+        else:
+            self.building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-{}.csv'.format(self.tr)).astype('int')
+        self.real_damage = np.loadtxt('damagelabels50/Jared-3-{}.csv'.format(self.tr), delimiter = ',').astype('int')
+        test_damage = np.loadtxt('damagelabels50/Jared-3-{}.csv'.format(self.te), delimiter = ',').astype('int')
+        test_segs = self.maps[self.te].segmentations[50].ravel().astype('int')
+        segs = self.maps[self.te].segmentations[50]
+
+    def _setup_postfix(self, model_type, random, ddilate, minimal):
         self.postfix = '_'+model_type
         if random:
             self.postfix+='_random'
@@ -114,31 +136,16 @@ class noise():
         elif minimal and model_type == 'px':
             self.postfix+='_fewer'
         self.postfix += '_{}'.format(run_num)
-        self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
-        self.p = 'ObjectNoiseProgress2/'
-        self.map_2, self.map_3 = map_overlay.basic_setup([100], 50)
-        if random:
-            self.building_rando = np.loadtxt('damagelabels50/non_damage_random-3-3.csv').astype('int')
-        else:
-            self.building_rando = np.loadtxt('damagelabels50/all_rooftops_random-3-3.csv').astype('int')
-        self.real_damage = np.loadtxt('damagelabels50/Jared-3-3.csv', delimiter = ',').astype('int')
-        test_damage = np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')
-        test_segs = self.map_2.segmentations[50].ravel().astype('int')
-        segs = self.map_2.segmentations[50]
-        self.damage_ground = indcs2bools(test_damage, test_segs)[segs].ravel()
-        self.iters = 50 if dilate else 100
-        self.order = better_order(self.iters/2)
-        self.damage_AUCs = np.zeros(self.iters)
 
     def gen_training(self, i):
         if self.dilate:
-            new_training = np.loadtxt('damagelabels50/Sim_{}-3-3.csv'.format(i)).astype('int')
+            new_training = np.loadtxt('damagelabels50/Sim_{}-3-{}.csv'.format(i, self.tr)).astype('int')
         else:
             new_training = np.concatenate((self.building_rando[:i*10], self.real_damage))
         if self.model_type == 'px':
-            return self.map_3.mask_segments_by_indx(new_training, 50, False).ravel()
+            return self.maps[self.tr].mask_segments_by_indx(new_training, 50, False).ravel()
         else:
-            return indcs2bools(new_training,self.map_3.segmentations[50])
+            return indcs2bools(new_training,self.maps[self.tr].segmentations[50])
 
     def run(self):
         model = self.model_con()
@@ -146,7 +153,7 @@ class noise():
             i = self.order[i]
             print 'Running with {} noise segs'.format(i*10)
             new_training = self.gen_training(i)
-            pred = model.fit_and_predict(self.map_3, self.map_2, labels = new_training)
+            pred = model.fit_and_predict(self.maps[self.tr], self.maps[self.te], labels = new_training)
             #d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
             FPR = analyze_results.FPR_from_FNR(self.damage_ground, pred.ravel(), TPR = .9, precision = True)
             self.damage_AUCs[i] = FPR#d_AUC
