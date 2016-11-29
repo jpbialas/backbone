@@ -104,7 +104,7 @@ class noise():
         assert(not (random and dilate))
         self.model_type = model_type
         self.dilate = dilate
-        self._setup_postfix(model_type, random, dilate, minimal)
+        self._setup_postfix(run_num, model_type, random, dilate, minimal)
         self.model_con = ObjectClassifier if model_type == 'object' else PxClassifier
         self.p = 'ObjectNoiseProgress2/'
         self.damage_ground = indcs2bools(test_damage, test_segs)[segs].ravel()
@@ -125,7 +125,7 @@ class noise():
         test_segs = self.maps[self.te].segmentations[50].ravel().astype('int')
         segs = self.maps[self.te].segmentations[50]
 
-    def _setup_postfix(self, model_type, random, dilate, minimal):
+    def _setup_postfix(self, run_num, model_type, random, dilate, minimal):
         self.postfix = '_'+model_type
         if random:
             self.postfix+='_random'
