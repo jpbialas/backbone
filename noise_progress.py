@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from object_model import ObjectClassifier
 from px_model import PxClassifier
@@ -78,7 +78,8 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
     xaxes = xAxis()
     all_methods = [('object','', 'blue', 100, 0), ('object', '_random', 'red', 100, 0), \
                     ('px','', 'cyan', 100, 1), ('px', '_random', 'magenta', 100, 1), \
-                    ('object','_minimal', 'brown', 100, 0), ('object', '_random_minimal', 'yellow', 100, 0)]
+                    ('object','_minimal', 'brown', 100, 0), ('object', '_random_minimal', 'yellow', 100, 0), \
+                    ('px','_fewer', 'green', 100, 1), ('px', '_random_fewer', 'teal', 100, 1)]
     for method in all_methods:
         fn = 'ObjectNoiseProgress2/Damage_AUC_{}{}_'.format(method[0], method[1])
         ave = np.zeros(method[3])
@@ -88,7 +89,9 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
             all_plots[indcs.index(i)] = 100*next_plot
         valid = np.where(np.min(all_plots, axis = 0) > 0)[0]
         ave = np.mean(all_plots, axis = 0)[valid]
-        #ave = ave+(100-ave[0])
+        print '1', ave
+        #ave = ave/ave[0]*100
+        print '2', ave
         x_axis = 100*xaxes[method[4]][valid]
         std_error = (np.std(all_plots, axis = 0)/np.sqrt(n))[valid]
         ax = plt.axes()
@@ -100,7 +103,7 @@ def tests(indcs = [0,1,2,3,4,5,6,7]):
 
 
 class noise():
-    def __init__(self, run_num = 0, model_type = 'px', random = False, dilate = True, minimal = True):
+    def __init__(self, run_num = 0, model_type = 'object', random = False, dilate = True, minimal = False):
         assert(not (random and dilate))
         self.model_type = model_type
         self.dilate = dilate
@@ -147,10 +150,11 @@ class noise():
             print 'Running with {} noise segs'.format(i*10)
             new_training = self.gen_training(i)
             pred = model.fit_and_predict(self.map_3, self.map_2, labels = new_training)
-            d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
-            self.damage_AUCs[i] = d_AUC
-            np.save('{}Damage_AUC{}.npy'.format(self.p, self.postfix), self.damage_AUCs)
-            plt.close(d_roc)
+            #d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
+            FPR = analyze_results.FPR_from_FNR(self.damage_ground, pred.ravel(), TPR = .95)
+            self.damage_AUCs[i] = FPR#d_AUC
+            np.save('{}Damage_FPR{}.npy'.format(self.p, self.postfix), self.damage_AUCs)
+            #plt.close(d_roc)
 
 
 if __name__ == '__main__':

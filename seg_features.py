@@ -64,7 +64,7 @@ def color_edge(my_map, seg):
             Average color and edge density for each segment
             Names of those features
     '''
-    names = np.array(['red{}'.format(seg),'green{}'.format(seg), 'blue{}'.format(seg), 'ED{}'.format(seg)])
+    names = np.array(['red {}'.format(seg),'green {}'.format(seg), 'blue {}'.format(seg), 'Edge Density {}'.format(seg)])
     
     p = os.path.join('features', "color_edge_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], seg))
 
@@ -132,7 +132,7 @@ def hog(my_map, seg):
     bins = 16
     names = []
     for i in range(bins):
-        names.append('hog{}'.format(i))
+        names.append('hog {}'.format(i))
     p = os.path.join('features', "color_edge_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], seg))
     
     if os.path.exists(p):
@@ -162,7 +162,7 @@ def shapes(my_map, level):
             Rectangle and Ellipse fits for each segment
             Names of those features
     '''
-    names = np.array(['re{}'.format(level),'rf{}'.format(level),'ee{}'.format(level),'ef{}'.format(level)])
+    names = np.array(['rect elong {}'.format(level),'rect fit{}'.format(level),'ellipse elong {}'.format(level),'ellipse fit {}'.format(level)])
     p = os.path.join('features', "aspect_extent_shapefilewithfeatures003-00{}-{}.npy".format(my_map.name[-1], level))
     if os.path.exists(p):
         data = np.load(p)

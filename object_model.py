@@ -23,7 +23,7 @@ class ObjectClassifier():
         self.base_seg  = 50
         self.segs      = [100]
         self.even      = 1
-        self.features  = sf.NZ_minimal#NZ_features 
+        self.features  = sf.NZ_features 
 
     def haiti_constants(self):
         self.n_trees   = 200
@@ -110,7 +110,10 @@ class ObjectClassifier():
         # Print the feature ranking
         print("Feature ranking:")
         for f in range(len(self.feat_names)):
-            print("{}. feature {}: ({})".format(f + 1, self.feat_names[indices[f]], importances[indices[f]]))
+            #print("{}. feature {}: ({})".format(f + 1, self.feat_names[indices[f]], importances[indices[f]]))
+            g = f + 26
+            h = g + 26
+            print("{} & {} & {} & {} & {} & {} & {} & {} & {} \\".format(f + 1, self.feat_names[indices[f]], importances[indices[f]], g + 1, self.feat_names[indices[g]], importances[indices[g]], h + 1, self.feat_names[indices[h]], importances[indices[h]]))
         # Plot the feature importances of the forest
         plt.figure()
         plt.title("Feature importances")
