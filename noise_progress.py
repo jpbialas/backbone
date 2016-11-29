@@ -125,7 +125,7 @@ class noise():
         test_segs = self.maps[self.te].segmentations[50].ravel().astype('int')
         segs = self.maps[self.te].segmentations[50]
 
-    def _setup_postfix(self, model_type, random, ddilate, minimal):
+    def _setup_postfix(self, model_type, random, dilate, minimal):
         self.postfix = '_'+model_type
         if random:
             self.postfix+='_random'
