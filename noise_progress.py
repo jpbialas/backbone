@@ -161,5 +161,5 @@ if __name__ == '__main__':
         options = [(False, False), (True, False), (False, True)]
         option = options[int(sys.argv[2])]
         assert(sys.argv[3] == 'object' or sys.argv[3] == 'px')
-        n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1], model_type = sys.arv[3])
+        n = noise(run_num = sys.argv[1], random = option[0], dilate = option[1], model_type = sys.argv[3])
         n.run()
