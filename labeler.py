@@ -22,6 +22,7 @@ class Labelers:
         self.q_labels = np.array([])
         self.rewards = np.array([]) #nx3 matrix for n labelers, storing sum(x), sum(x^2), n_rewards
         self.n = n
+        self.min_labeled = 2
         if basic_setup:
             self.basic_setup()
 
@@ -40,10 +41,16 @@ class Labelers:
         with open(fn, mode='r') as infile:
             reader = csv.reader(infile)
             self.user_map = {}
+            self.image_count = {}
             for row in reader:
-                email = row[0][:row[0].find('_')] 
-                if not email in self.user_map:
+                email = row[0][:row[0].find('_')]
+                if not email in self.image_count:
+                    self.image_count[email] = 1
+                else:
+                    self.image_count[email] += 1
+                if self.image_count[email] == self.min_labeled:
                     self.user_map[email] = len(self.user_map)
+
 
 
     def basic_setup(self):
@@ -59,8 +66,9 @@ class Labelers:
                 email = row[0][:row[0].find('_')]
                 img_num = int(row[2])
                 labels = np.array(map(int, row[3][1:-1].split(',')))
-                self.labels[self.user_map[email]][indices[img_num]] = 0
-                self.labels[self.user_map[email]][labels] = 1
+                if email in self.user_map:
+                    self.labels[self.user_map[email]][indices[img_num]] = 0
+                    self.labels[self.user_map[email]][labels] = 1
         self.q_labels = (self.labels>-1).astype('int')-2
 
 
@@ -256,6 +264,7 @@ def test():
 
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
+    print labelers.labels, np.sort(labelers.emails)
     labelers.show_FPR_TPR()
     #labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
     #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
