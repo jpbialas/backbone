@@ -107,8 +107,12 @@ class al:
 
     def update_labels(self, new_training):
         train_segs = self.train_map.unique_segs(self.seg)
-        if "donmez" in self.update_type:
-            new_labs = self.labelers.donmez_vote(train_segs[new_training], 1, True)
+        if self.update_type == "donmez":
+            new_labs = self.labelers.donmez_vote(train_segs[new_training], .85, True)
+            self.UIs.append(self.labelers.UI())
+            np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
+        elif self.update_type == "donmez_1":
+            new_labs = self.labelers.donmez_pick_1(train_segs[new_training], 1)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
@@ -120,8 +124,6 @@ class al:
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
         elif self.update_type == "model":
             new_labs = self.labelers.model_vote(self.train_map, new_training)
-        elif self.update_type == "model_2":
-            new_labs = self.labelers.model_vote(self.train_map, new_training, all = True)
 
         self.training_labels[new_training] = new_labs
 

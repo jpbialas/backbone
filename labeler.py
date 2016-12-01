@@ -116,7 +116,7 @@ class Labelers:
             self.q_labels[i,good_indices] = self.labels[i,good_indices]
 
 
-    def model_vote(self, train_map, new_train, all = False):
+    def model_vote(self, train_map, new_train):
         tr_indcs = train_map.unique_segs(20)
         new_train_indcs = tr_indcs[new_train]
         total_vote = np.zeros(len(new_train))
@@ -126,13 +126,17 @@ class Labelers:
         P = np.array(P)
         best_labelers = np.argmax(P, axis = 0)
         best_labels = self.labels[best_labelers,new_train_indcs]
-        if all:
-            self.q_labels[:, new_train_indcs] = self.labels[:, new_train_indcs]
-        else:
-            self.q_labels[best_labelers,new_train_indcs] = best_labels
-        majority_vote = self.majority_vote()
+        self.q_labels[best_labelers,new_train_indcs] = best_labels
         return best_labels
         
+    def donmez_pick_1(self, label_indices):
+        all_ui = self.UI()
+        P = self.labels[:, label_indices]>=0
+        P = P*all_UI.reshape((all_UI.shape[0], 1))
+        best_labelers = np.argmax(P, axis = 0)
+        best_labels = self.labels[best_labelers,new_train_indcs]
+        return best_labels
+
 
     def donmez_vote(self, label_indices, error, update = True):
         top_indices = self.top_labelers(error)
