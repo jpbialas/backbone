@@ -131,9 +131,6 @@ class al:
     def test_progress(self):
         model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
-        print self.labelers.rewards
-        print np.unique(training_sample), self.training_labels[np.unique(training_sample)], training_sample.shape, np.unique(training_sample).shape
-        print self.labelers.labeler('masexaue@mtu.edu')[self.train_map.unique_segs(self.seg)[np.unique(training_sample)]]
         model.fit(self.train_map, self.training_labels, training_sample)
         proba = model.predict_proba(self.test_map)
         g_truth = self.labelers.majority_vote()[self.test_map.segmentations[self.seg]]
