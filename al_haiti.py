@@ -112,7 +112,7 @@ class al:
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "donmez_1":
-            new_labs = self.labelers.donmez_pick_1(train_segs[new_training], 1)
+            new_labs = self.labelers.donmez_pick_1(train_segs[new_training])
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
         elif self.update_type == "majority":
