@@ -132,7 +132,7 @@ class Labelers:
     def donmez_pick_1(self, label_indices):
         all_ui = self.UI()
         P = self.labels[:, label_indices]>=0
-        P = P*all_UI.reshape((all_UI.shape[0], 1))
+        P = P*all_ui.reshape((all_ui.shape[0], 1))
         best_labelers = np.argmax(P, axis = 0)
         best_labels = self.labels[best_labelers,new_train_indcs]
         return best_labels
