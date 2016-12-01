@@ -165,7 +165,7 @@ class noise():
             new_training = self.gen_training(i)
             pred = model.fit_and_predict(self.maps[self.tr], self.maps[self.te], labels = new_training)
             #d_roc, d_AUC, _, _, _, _ = analyze_results.ROC(self.damage_ground, pred.ravel(), '')
-            FPR = analyze_results.FPR_from_FNR(self.damage_ground, pred, TPR = .9)
+            FPR = analyze_results.FPR_from_FNR(self.damage_ground, pred, TPR = .9, prec = False)
             self.damage_AUCs[i] = FPR#d_AUC
             np.save('{}Damage_Prec{}.npy'.format(self.p, self.postfix), self.damage_AUCs)
             #plt.close(d_roc)

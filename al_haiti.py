@@ -82,7 +82,7 @@ class al:
 
     def rf_uncertainty(self):
         thresh = .06
-        model = ObjectClassifier(verbose = 0)
+        model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.train_map, self.training_labels, training_sample)
         proba_segs = model.predict_proba_segs(self.train_map)
@@ -127,7 +127,7 @@ class al:
 
 
     def test_progress(self):
-        model = ObjectClassifier(verbose = 0)
+        model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         print self.labelers.rewards
         print np.unique(training_sample), self.training_labels[np.unique(training_sample)], training_sample.shape, np.unique(training_sample).shape
