@@ -15,7 +15,7 @@ class ObjectClassifier():
 
     def __init__(self, NZ = True, verbose = 1):
         self.verbose   = verbose
-        self.NZ_constants() if NZ else haiti_constants()
+        self.NZ_constants() if NZ else self.haiti_constants()
 
 
     def NZ_constants(self):
@@ -128,7 +128,7 @@ class ObjectClassifier():
 
 def main_haiti():
     from labeler import Labelers
-    model      = ObjectClassifier(1)
+    model      = ObjectClassifier(0,1)
     y          = Labelers().majority_vote()
     y2         = Labelers().labeler('masexaue@mtu.edu')
     test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
@@ -136,7 +136,7 @@ def main_haiti():
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    probs = model.fit_and_predict(train_map, test_map, y2[train_map.unique_segs(20)])
+    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
     g_truth = y[test_map.segmentations[20]]
     print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
@@ -151,22 +151,23 @@ def main_haiti():
 
 def label_test():
     from labeler import Labelers
-    model      = ObjectClassifier(1)
+    model      = ObjectClassifier(NZ = False)
     labelers   = Labelers()
     test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
     train      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    for email in labelers.emails[np.array([0,1,2,3,4,5,6,10,11,12, 16, 17])]:
+    for email in ['ab873@cornell.edu','ericaa@mtu.edu','cetorres@mtu.edu']:#labelers.emails[np.array([0,1,2,3,4,5,6,10,11,12, 16, 17])]:
         print email
         img = labelers.show_labeler(email, test_map)
         fig = plt.figure(email)
         fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
         y = (labelers.labeler(email) == labelers.majority_vote())
-        probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
+        probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)], indcs = np.where(labelers.labeler(email)[train_map.unique_segs(20)]>=0))
         plt.imshow(probs, cmap = 'seismic',  norm = plt.Normalize(0,1))
         plt.title(email), plt.xticks([]), plt.yticks([])
+        plt.contour(labelers.majority_vote()[test_map.segmentations[20]], linewidths = .5, colors = 'green')
         fig.savefig('label_predict/{}_predict.png'.format(email), format='png', dpi = 800)
         #analyze_results.contour_map(img, probs<0.5, 'x<0.5')
         #analyze_results.contour_map(img, (probs<0.6)-(probs<.4), '0.4<x<0.6')
@@ -184,7 +185,7 @@ def label_test():
 
 
 if __name__ == '__main__':
-    main_haiti()
-    #label_test()
+    #main_haiti()
+    label_test()
 
 

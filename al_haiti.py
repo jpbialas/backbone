@@ -26,13 +26,13 @@ class al:
         self.test_progress()
 
     def set_params(self):
-        self.start_n    = 50
+        self.start_n    = 200
         self.batch_size = 50
         self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_5/'
+        self.path       = 'al_7_200/'
         self.fprs       = []
         self.UIs        = []
 
@@ -107,7 +107,7 @@ class al:
 
     def update_labels(self, new_training):
         train_segs = self.train_map.unique_segs(self.seg)
-        if self.update_type == "donmez":
+        if "donmez" in self.update_type:
             new_labs = self.labelers.donmez_vote(train_segs[new_training], 1, True)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
@@ -163,7 +163,8 @@ def run_al(i, update, random):
     next_al.run()
 
 if __name__ == '__main__':
-    options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('model_2', 'rf'), ('random', 'rf')]
+    #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
+    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     

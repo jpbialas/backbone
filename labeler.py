@@ -47,7 +47,7 @@ class Labelers:
 
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels5.csv'
+        fn = 'damagelabels20/labels7.csv'
         indices = [np.arange(0,30354), np.arange(30354,67105),np.arange(67105, 97710)]
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
@@ -194,7 +194,7 @@ class Labelers:
 
 
     def show_labeler(self, email, disp_map, level = 20):
-        img = disp_map.mask_segments(self.labeler(email)>0, level, with_img = True, opacity = .4)
+        img = disp_map.mask_segments(self.labeler(email)>0, level, with_img = True, opacity = .4)[4096/3:, :]
         self.show_img(img, email)
         return img
 
@@ -226,10 +226,10 @@ class Labelers:
         for i in range(FPR.shape[0]):
             ax.annotate(names[i], (FPR[i], TPR[i]))
         print FPR.shape
-        #ax.annotate('Under Labeler', (.002, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        #ax.annotate('Over Labeler', (.092, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        #ax.annotate('Good Labeler', (.002, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
-        #ax.annotate('Bad Labeler', (.092, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        ax.annotate('Under Labeler', (.002, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        ax.annotate('Over Labeler', (.092, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        ax.annotate('Good Labeler', (.002, .9), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
+        ax.annotate('Bad Labeler', (.092, .07), bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5))
         plt.title('Label Comparison'), plt.xlabel('FPR'), plt.ylabel('TPR'), plt.ylim([0,1]), plt.xlim([0,1])
 
 
@@ -254,10 +254,10 @@ def test():
     labelers = Labelers()
     labelers.show_FPR_TPR()
     #labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
-    labelers.show_labeler('masexaue@mtu.edu', haiti_map)
-    #labelers.show_labeler('alex@renda.org', haiti_map)
+    #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
+    labelers.show_labeler('cetorres@mtu.edu', haiti_map)
     labelers.show_majority_vote(haiti_map)
-    #labelers.show_prob_vote(haiti_map)
+    labelers.show_prob_vote(haiti_map)
     plt.show()
     #print labelers.emails
     #print labelers.donmez_vote(np.arange(labelers.n), 0.5, False)
