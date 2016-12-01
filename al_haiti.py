@@ -132,8 +132,10 @@ class al:
         model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.train_map, self.training_labels, training_sample)
+        print 'trained'
         proba = model.predict_proba(self.test_map)
         g_truth = self.labelers.majority_vote()[self.test_map.segmentations[self.seg]]
+        print 'predicted'
         n_labeled = np.where(self.training_labels > -1)[0].shape[0]
         if self.show:
             fig, AUC = analyze_results.ROC(g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
@@ -141,17 +143,24 @@ class al:
             plt.close(fig)
         FPR = analyze_results.FPR_from_FNR(g_truth.ravel(), proba.ravel(), TPR = self.TPR)
         self.fprs.append(FPR)
+        print 'updated fprs'
         np.save('{}fprs{}.npy'.format(self.path, self.postfix), self.fprs)
+        print 'saved'
 
 
     def update(self):
+        print 'updating'
         new_training = self.uncertainty()[:self.batch_size]
+        print 'got new training'
         self.update_labels(new_training)
+        print 'updated labels'
         self.test_progress()
+        print 'tested progress'
 
 
     def run(self):
         for i in range(self.updates):
+            print 'Iteration {}'.format(i)
             self.update()
 
 
