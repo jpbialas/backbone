@@ -134,7 +134,7 @@ class Labelers:
         P = self.labels[:, label_indices]>=0
         P = P*all_ui.reshape((all_ui.shape[0], 1))
         best_labelers = np.argmax(P, axis = 0)
-        best_labels = self.labels[best_labelers,labeler_indices]
+        best_labels = self.labels[best_labelers,label_indices]
         return best_labels
 
 
