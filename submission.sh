@@ -1,10 +1,10 @@
 #!/bin/bash
-#PBS -q mediumq
+#PBS -q verylongq
 #PBS -l select=1:ncpus=14
-#PBS -l walltime=8:00:00
+#PBS -l walltime=20:00:00
 #PBS -e errors
 #PBS -j eo
-#PBS -J 0-8
+#PBS -J 0-7
 
 # NOTE
 # '#PBS' directives must immediately follow your shell initialization line '#!/bin/<shell>'
@@ -39,4 +39,4 @@ module load mpi-sgi/2.04_64
 #
 cd $RUN_DIR
 #mpiexec -n 4 ./executable
-python al_haiti.py ${PBS_ARRAY_INDEX} rf model
+python al_haiti.py ${PBS_ARRAY_INDEX} 0

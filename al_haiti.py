@@ -26,13 +26,13 @@ class al:
         self.test_progress()
 
     def set_params(self):
-        self.start_n    = 200
+        self.start_n    = 50
         self.batch_size = 50
         self.updates    = 700
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
-        self.path       = 'al_7_200/'
+        self.path       = 'al_7/'
         self.fprs       = []
         self.UIs        = []
 
@@ -172,7 +172,7 @@ def run_al(i, update, random):
 
 if __name__ == '__main__':
     #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
-    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random')]
+    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random'), ('donmez', 'rf')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     
