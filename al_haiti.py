@@ -172,7 +172,7 @@ def run_al(i, update, random):
 
 if __name__ == '__main__':
     #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
-    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random'), ('donmez', 'rf')]
+    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     
