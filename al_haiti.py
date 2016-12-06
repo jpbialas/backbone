@@ -34,6 +34,7 @@ class al:
         self.verbose    = 1
         self.TPR        = .95
         self.seg        = 20
+        self.thresh     = .5
         self.path       = 'al_7/'
         self.fprs       = []
         self.UIs        = []
@@ -83,7 +84,6 @@ class al:
 
 
     def rf_uncertainty(self):
-        thresh = .06
         model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.train_map, self.training_labels, training_sample)
@@ -97,7 +97,7 @@ class al:
             fig.savefig('{}test_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
             plt.close(fig)
         unknown_indcs = np.where(self.training_labels == -1)[0]
-        uncertainties = 1-np.abs(proba_segs-thresh)
+        uncertainties = 1-np.abs(proba_segs-self.thresh)
         return self._uncertain_order(uncertainties.ravel(), unknown_indcs)
 
 
@@ -149,7 +149,8 @@ class al:
             fig, AUC = analyze_results.ROC(g_truth.ravel(), proba.ravel(), 'Haiti Test')[:2]
             fig.savefig('{}ROC_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
             plt.close(fig)
-        FPR = analyze_results.FPR_from_FNR(g_truth.ravel(), proba.ravel(), TPR = self.TPR)
+        FPR, thresh = analyze_results.FPR_from_FNR(g_truth.ravel(), proba.ravel(), TPR = self.TPR)
+        self.thresh = thresh
         self.fprs.append(FPR)
         print 'updated fprs'
         np.save('{}fprs{}.npy'.format(self.path, self.postfix), self.fprs)
@@ -175,7 +176,7 @@ class al:
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_thresh_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':

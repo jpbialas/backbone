@@ -20,7 +20,7 @@ class EM():
 
     def __init__(self, haiti_map, labelers, indcs = None):
         self.labelers = labelers
-        self.hait_map = haiti_map
+        self.haiti_map = haiti_map
         if indcs is None:
             relevant_labels = self.haiti_map.unique_segs(20)
         else:
