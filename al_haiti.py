@@ -178,7 +178,7 @@ class al:
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_40_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
