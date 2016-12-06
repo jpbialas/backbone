@@ -127,7 +127,7 @@ class al:
         elif self.update_type == "model":
             new_labs = self.labelers.model_vote(self.train_map, new_training)
         elif self.update_type == 'xie':
-            indcs = np.concatenate((np.where(self.training_labels>=-1)[0], new_training))
+            indcs = np.concatenate((np.where(self.training_labels>-1)[0], new_training))
             em = EM(self.train_map, self.labelers, train_segs[indcs])
             em.run()
             new_labs = (em.G[:,1]>0.5)[-self.batch_size:]
