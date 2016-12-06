@@ -138,11 +138,10 @@ def main_haiti():
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    em = EM(train_map, labelers)
-    em.run()
-    y2 = em.G[:,1]>0.5
+    #em = EM(train_map, labelers)
+    #em.run()
+    #y2 = em.G[:,1]>0.5
     g_truth    = y[test_map.segmentations[20]]
-    fig = plt.figure()
     FPRs = []
     TPRs = []
     for email in labelers.emails:
@@ -155,21 +154,12 @@ def main_haiti():
         FPRs.append(FPR)
         TPRs.append(TPR)
 
-    fig, ax = plt.subplots()
-    ax.scatter(FPRs, TPRs)
-    names = labelers.emails
-    for i in range(len(FPRs)):
-        ax.annotate(labelers.emails[i], (FPRs[i], TPRs[i]))
-    plt.title('ROC Curve')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.axis([0, 1, 0, 1])
-    fig.savefig('All_ROCs/{}_ROC.png'.format('Test2'), format='png')
-    probs = model.fit_and_predict(train_map, test_map, y2)
+    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
     print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
     fig, _, _, _, _, _ = analyze_results.ROC(g_truth.ravel(), probs.ravel(), 'Classifier')
     plt.scatter(FPRs, TPRs)
+    names = labelers.emails
     for i in range(len(FPRs)):
         plt.annotate(names[i], (FPRs[i], TPRs[i]))
 
