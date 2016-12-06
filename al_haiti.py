@@ -11,6 +11,7 @@ from sklearn.externals.joblib import Parallel, delayed
 from convenience_tools import *
 from labeler import Labelers
 import cv2
+from Xie import EM
 
 class al:    
     def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = False):
@@ -24,6 +25,7 @@ class al:
         self.labelers        = Labelers()
         self.training_labels = self._gen_training_labels(self.labelers.majority_vote()[self.train_map.unique_segs(self.seg)])
         self.test_progress()
+
 
     def set_params(self):
         self.start_n    = 50
@@ -124,6 +126,12 @@ class al:
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
         elif self.update_type == "model":
             new_labs = self.labelers.model_vote(self.train_map, new_training)
+        elif self.update_type == 'xie':
+            indcs = np.concatenate((np.where(self.training_labels>=-1)[0], new_training))
+            em = EM(self.train_map, self.labelers, train_segs[indcs])
+            em.run()
+            new_labs = (em.G[:,1]>0.5)[-self.batch_size:]
+            print zip(new_labs, self.labelers.majority_vote(train_segs[new_training]))
 
         self.training_labels[new_training] = new_labs
 
@@ -172,7 +180,7 @@ def run_al(i, update, random):
 
 if __name__ == '__main__':
     #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
-    options = [('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
+    options = [('xie', 'rf'), ('model', 'rf'), ('donmez_1', 'rf'), ('random', 'rf'), ('random', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     

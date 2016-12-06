@@ -8,6 +8,7 @@ import analyze_results
 import sklearn
 from convenience_tools import *
 from sklearn.externals.joblib import Parallel, delayed
+import time
 
 
 
@@ -129,24 +130,48 @@ class ObjectClassifier():
 def main_haiti():
     from labeler import Labelers
     model      = ObjectClassifier(0,1)
-    y          = Labelers().majority_vote()
-    y2         = Labelers().labeler('masexaue@mtu.edu')
-    test       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
-    train      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
+    labelers   = Labelers()
+    y          = labelers.majority_vote()
+    y2         = y.copy()*0
+    y2[np.load('damagelabels20/EM.npy')] = 1
+    train       = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+    test      = np.ix_( np.arange(4096/3, 4096), np.arange(4096/2, 4096))
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
-    g_truth = y[test_map.segmentations[20]]
-    print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
+    g_truth    = y[test_map.segmentations[20]]
+    fig = plt.figure()
+    FPRs = []
+    TPRs = []
+    for email in labelers.emails:
+        print email
+        a = time.time()
+        labels = labelers.labeler(email)[test_map.segmentations[20]]
+        b = time.time()
+        FPR, TPR = analyze_results.confusion_analytics(g_truth.ravel(), labels.ravel())
+        c = time.time()
+        FPRs.append(FPR)
+        TPRs.append(TPR)
+
+    fig, ax = plt.subplots()
+    ax.scatter(FPRs, TPRs)
+    names = labelers.emails
+    for i in range(len(FPRs)):
+        ax.annotate(labelers.emails[i], (FPRs[i], TPRs[i]))
+    plt.title('ROC Curve')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.axis([0, 1, 0, 1])
+    fig.savefig('All_ROCs/{}_ROC.png'.format('Test2'), format='png')
+    probs = model.fit_and_predict(train_map, test_map, y2[train_map.unique_segs(20)])
+    #print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
-    analyze_results.ROC(g_truth.ravel(), probs.ravel(), 'Haiti Test')[:2]
-    plt.figure('mask')
-    plt.imshow(test_map.mask_helper(test_map.img, probs))
-    plt.figure('mask 6%')
-    plt.imshow(test_map.mask_helper(test_map.img, probs>0.06))
-    plt.figure('mask 50%')
-    plt.imshow(test_map.mask_helper(test_map.img, probs>0.5))
+    fig, _, _, _, _, _ = analyze_results.ROC(g_truth.ravel(), probs.ravel(), 'Classifier')
+    plt.scatter(FPRs, TPRs)
+    for i in range(len(FPRs)):
+        plt.annotate(names[i], (FPRs[i], TPRs[i]))
+
+    fig.savefig('All_ROCs/{}_ROC.png'.format('Classifier'), format='png')
     plt.show()
 
 def label_test():
@@ -185,7 +210,7 @@ def label_test():
 
 
 if __name__ == '__main__':
-    #main_haiti()
-    label_test()
+    main_haiti()
+    #label_test()
 
 

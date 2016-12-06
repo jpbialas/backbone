@@ -44,12 +44,16 @@ class Labelers:
             self.image_count = {}
             for row in reader:
                 email = row[0][:row[0].find('_')]
+                img_num = int(row[2])
                 if not email in self.image_count:
-                    self.image_count[email] = 1
+                    self.image_count[email] = [1,0,0]
+                    self.image_count[email][img_num] = 1
                 else:
-                    self.image_count[email] += 1
-                if self.image_count[email] == self.min_labeled:
+                    self.image_count[email][0] += 1
+                    self.image_count[email][img_num] = 1
+                if self.image_count[email][0] == self.min_labeled:
                     self.user_map[email] = len(self.user_map)
+            #print self.image_count,np.array(self.image_count.values()), np.sum(1-np.array(self.image_count.values()), axis = 0)
 
 
 
@@ -264,13 +268,17 @@ def test():
 
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
-    print labelers.labels, np.sort(labelers.emails)
+    print labelers.emails
     labelers.show_FPR_TPR()
     #labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
     #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
-    labelers.show_labeler('cetorres@mtu.edu', haiti_map)
+    #labelers.show_labeler('cetorres@mtu.edu', haiti_map)
     labelers.show_majority_vote(haiti_map)
     labelers.show_prob_vote(haiti_map)
+    plt.figure()
+    indcs = np.ix_(np.arange(4096/3, 4096), np.arange(4096))
+    probs = labelers.probability()[haiti_map.segmentations[20]][np.ix_(np.arange(4096/3, 4096), np.arange(4096))]
+    plt.imshow(probs,cmap = 'seismic', norm = plt.Normalize(0,1))
     plt.show()
     #print labelers.emails
     #print labelers.donmez_vote(np.arange(labelers.n), 0.5, False)

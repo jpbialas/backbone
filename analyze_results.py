@@ -1,43 +1,25 @@
 import numpy as np
-from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve
 import sklearn.metrics as metrics
 import sklearn
 import cv2
 import matplotlib.pyplot as plt
 from convenience_tools import *
-
-def gen_model_name(model_type = "Segs", labelling = "Jared", even = True, img_num = 3, new_feats = True):
-    full_name = model_type+"_"+labelling+"_"
-    full_name+="EVEN_" if even else ""
-    full_name+=img_num
-    full_name+="_NewFeats" if new_feats else ""
-    return full_name
+import time
 
 
-def prec_recall_map(myMap, mask_true, mask_predict):
+def confusion_matrix(y_true, y_pred):
     '''
-    INPUT:
-        - confusion_matrix: (2x2 ndarray) Confusion matrix of shape: (actual values) x (predicted values)
-    OUTPUT:
-        - (tuple) A Tuple containing the precision and recall of the confusion matrix
-
+        Generates confusion_matrix faster than sklearn
     '''
-    label = myMap.getLabels(mask_true)
-    prediction = myMap.getLabels(mask_predict)
-    conf = confusion_matrix(label, prediction)
-    TP = conf[1,1]
-    FP = conf[0,1]
-    TN = conf[0,0]
-    FN = conf[1,0]
+    TPTN = y_true == y_pred
+    TP = np.sum(np.logical_and(TPTN, y_true))
+    TN = np.sum(TPTN) - TP
+    FPFN = 1 - TPTN
+    FP = np.sum(np.logical_and(FPFN, y_pred))
+    FN = np.sum(FPFN) - FP
+    return np.array([[TN, FP],[FN, TP]])
 
-    precision = float(TP)/(TP+FP)
-    recall = float(TP)/(TP+FN)
-    accuracy = float(TP + TN)/(TP+FN+TN+FP)
-    f1 = float(2*precision*recall)/(precision+recall)
-
-
-    return precision, recall, accuracy, f1
 
 def draw_segment_analysis(my_map, labels):
     pbar = custom_progress()
@@ -54,15 +36,15 @@ def draw_segment_analysis(my_map, labels):
 
 
 def confusion_analytics(y_true, y_pred):
-    conf = confusion_matrix(y_true, y_pred)
-    TP = conf[1,1]
-    FP = conf[0,1]
-    TN = conf[0,0]
-    FN = conf[1,0]
-    recall = metrics.recall_score(y_true, y_pred)
+    TPTN = y_true == y_pred
+    TP = np.sum(np.logical_and(TPTN, y_true))
+    TN = np.sum(TPTN) - TP
+    FPFN = 1 - TPTN
+    FP = np.sum(np.logical_and(FPFN, y_pred))
+    FN = np.sum(FPFN) - FP
     FPR = float(FP)/(FP+TN)
-    FNR = 1-recall
-    return round(FPR,5), round(FNR, 5), conf
+    TPR = float(TP)/(TP+FN)
+    return FPR, TPR
 
 
 
@@ -131,10 +113,6 @@ def contour_map(img, full_predict, title = 'Contour Map'):
     plt.imshow(img)
     plt.title(title), plt.xticks([]), plt.yticks([])
 
-def average_class_prob(map_test, ground_truth, full_predict, name):
-    return np.sum(ground_truth.ravel().astype('float')*full_predict.ravel())/(np.sum(ground_truth.ravel()))
-
-
 
 def FPR_from_FNR(ground_truth, full_predict, TPR = .95, prec = False):
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
@@ -167,7 +145,7 @@ def ROC(ground_truth, full_predict, name, save = False):
 
     fig = plt.figure('{} ROC'.format(name))
     AUC = sklearn.metrics.roc_auc_score(ground_truth.ravel(), full_predict.ravel())
-    plt.scatter(FPRs, TPRs)
+    plt.plot(FPRs, TPRs)
     plt.title('ROC Curve (AUC = {})'.format(round(AUC, 5)))
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
