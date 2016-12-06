@@ -84,6 +84,8 @@ class al:
 
 
     def rf_uncertainty(self):
+        #thresh = self.thresh
+        thresh = .4
         model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.train_map, self.training_labels, training_sample)
@@ -97,7 +99,7 @@ class al:
             fig.savefig('{}test_{}{}.png'.format(self.path, n_labeled, self.postfix), format='png')
             plt.close(fig)
         unknown_indcs = np.where(self.training_labels == -1)[0]
-        uncertainties = 1-np.abs(proba_segs-self.thresh)
+        uncertainties = 1-np.abs(proba_segs-thresh)
         return self._uncertain_order(uncertainties.ravel(), unknown_indcs)
 
 
@@ -176,7 +178,7 @@ class al:
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_thresh_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_40_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
