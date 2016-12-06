@@ -54,8 +54,9 @@ class al:
             train_indices = np.random.choice(sub_samp, self.start_n//2, replace = False)
             seg_indices = self.train_map.unique_segs(20)[train_indices]
             self.labelers.donmez_vote(seg_indices, .85, True)
-            self.labelers.model_start(self.train_map, train_indices)
             training_labels[train_indices] = i
+        print np.where(training_labels>=0)
+        self.labelers.model_start(self.train_map, np.where(training_labels>=0))
         return training_labels
 
 
@@ -127,7 +128,10 @@ class al:
         elif self.update_type == "email":
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
         elif self.update_type == "model":
+            assert('use yan instead')
             new_labs = self.labelers.model_vote(self.train_map, new_training)
+        elif self.update_type == "yan":
+            new_labs = self.labelers.model_vote(new_training)
         elif self.update_type == 'xie':
             indcs = np.concatenate((np.where(self.training_labels>-1)[0], new_training))
             em = EM(self.train_map, self.labelers, train_segs[indcs])
@@ -183,7 +187,7 @@ def run_al(i, update, random):
 
 if __name__ == '__main__':
     #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
-    options = [('xie', 'random'), ('model', 'random'), ('donmez', 'random'), ('random', 'random'), ('donmez_1', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
+    options = [('xie', 'random'), ('yan', 'random'), ('donmez', 'random'), ('random', 'random'), ('donmez_1', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     

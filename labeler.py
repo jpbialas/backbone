@@ -8,7 +8,7 @@ from scipy.stats import t
 from sklearn.externals.joblib import Parallel, delayed
 
 def model_vote_help(train_map, q_labels, majority_vote, new_train):
-    new_model = ObjectClassifier()
+    new_model = ObjectClassifier(NZ = False)
     indcs = np.where(q_labels>-1)
     new_model.fit(train_map, (q_labels == majority_vote), indcs)
     probs = new_model.predict_proba_segs(train_map, new_train)
@@ -80,7 +80,7 @@ class Labelers:
         if email in self.user_map:
             console.log("ERROR: User already in system")
         elif boolean_map.shape[0]!=self.n:
-            console.log("Error: new labels must be same shape as others")
+            console.log("ERROR: new labels must be same shape as others")
         elif self.labels.shape[0]>0:
             self.labels = np.vstack((self.labels, boolean_map))
             self.q_labels = np.vstack((self.q_labels, (boolean_map>-1).astype('int')-2))
@@ -120,7 +120,7 @@ class Labelers:
         threshold = error*max_ui
         return np.where(all_ui>=threshold)[0]
 
-    def model_start(self, train_map, new_train):
+    def model_start_old(self, train_map, new_train):
         tr_indcs = train_map.unique_segs(20)
         for i in range(len(self.labels)):
             new_train_indcs = tr_indcs[new_train]
@@ -128,7 +128,7 @@ class Labelers:
             self.q_labels[i,good_indices] = self.labels[i,good_indices]
 
 
-    def model_vote(self, train_map, new_train):
+    def model_vote_old(self, train_map, new_train):
         tr_indcs = train_map.unique_segs(20)
         new_train_indcs = tr_indcs[new_train]
         total_vote = np.zeros(len(new_train))
@@ -140,6 +140,28 @@ class Labelers:
         best_labels = self.labels[best_labelers,new_train_indcs]
         self.q_labels[best_labelers,new_train_indcs] = best_labels
         return best_labels
+
+    def model_start(self, train_map, indcs):
+        predictions = np.zeros((self.labels.shape[0], train_map.unique_segs(20).shape[0]))
+        agreement = (self.labels == self.majority_vote())[:,train_map.unique_segs(20)]
+        print self.majority_vote()[train_map.unique_segs(20)]
+        print self.labels[:,train_map.unique_segs(20)]
+        print agreement
+        for i in range(self.labels.shape[0]):
+            new_model = ObjectClassifier(NZ = False)
+            new_model.fit(train_map, agreement[i], indcs)
+            probs = new_model.predict_proba_segs(train_map)
+            predictions[i] = probs
+            print predictions
+        best_labelers = np.argmax(predictions, axis = 0)
+        print best_labelers
+        np.save('best.npy',best_labelers)
+        assert(best_labelers.shape[0] == train_map.unique_segs(20).shape[0])
+        self.model_labels = self.labels[best_labelers,train_map.unique_segs(20).shape[0]]
+
+    def model_vote(self, indcs):
+        return self.model_labels[indcs]
+
         
     def donmez_pick_1(self, label_indices):
         all_ui = self.UI()
