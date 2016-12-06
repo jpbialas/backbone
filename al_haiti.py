@@ -35,7 +35,7 @@ class al:
         self.TPR        = .95
         self.seg        = 20
         self.thresh     = .5
-        self.path       = 'al_7/'
+        self.path       = 'al_8/'
         self.fprs       = []
         self.UIs        = []
 
