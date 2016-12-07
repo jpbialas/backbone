@@ -58,9 +58,9 @@ class al:
         print np.where(training_labels>=0)
         if self.update_type == 'yan':
             indcs = np.where(training_labels>-1)[0]
-            em = EM(self.train_map, self.labelers, self.train_map.unique_segs(self.seg)[indcs])
-            em.run()
-            self.labelers.model_start(self.train_map, np.where(training_labels>=0)[0],  em.G[:,1]>0.5)
+            #em = EM(self.train_map, self.labelers, self.train_map.unique_segs(self.seg)[indcs])
+            #em.run()
+            self.labelers.model_start(self.train_map, indcs)#,  em.G[:,1]>0.5)
         return training_labels
 
 
@@ -90,7 +90,7 @@ class al:
 
     def rf_uncertainty(self):
         #thresh = self.thresh
-        thresh = .4
+        thresh = .06
         model = ObjectClassifier(NZ = 0, verbose = 0)
         training_sample = model.sample(self.training_labels, EVEN = 2)
         model.fit(self.train_map, self.training_labels, training_sample)
@@ -183,12 +183,12 @@ class al:
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_2_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':
     #options = [('majority', 'random'), ('random', 'random'), ('majority', 'rf'), ('model', 'rf'), ('donmez', 'rf'), ('random', 'rf')]
-    options = [('xie', 'random'), ('yan', 'random'), ('donmez', 'random'), ('random', 'random'), ('donmez_1', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
+    options = [('yan', 'rf'), ('donmez', 'rf'), ('majority', 'rf'), ('random', 'rf'), ('xie', 'random'), ('donmez', 'rf'), ('majority', 'rf'), ('majority', 'random')]
     option = options[int(sys.argv[2])]
     run_al(sys.argv[1], option[0], option[1])
     

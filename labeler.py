@@ -145,7 +145,13 @@ class Labelers:
         predictions = np.zeros((self.labels.shape[0], train_map.unique_segs(20).shape[0]))
         agreement = (self.labels == self.majority_vote())[:,train_map.unique_segs(20)]
         if truth is not None:
+            for i in range(agreement.shape[0]):
+                print agreement[i,indcs].astype('int') - (self.labels[i,train_map.unique_segs(20)[indcs]] == truth).astype('int')
+
             agreement[:,indcs] = self.labels[:,train_map.unique_segs(20)[indcs]] == truth
+            print "HERE"
+            for i in range(agreement.shape[0]):
+                print agreement[i,indcs].astype('int') - (self.labels[i,train_map.unique_segs(20)[indcs]] == truth).astype('int')
         for i in range(self.labels.shape[0]):
             new_model = ObjectClassifier(NZ = False)
             new_model.fit(train_map, agreement[i], indcs)
