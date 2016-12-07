@@ -151,13 +151,20 @@ class Labelers:
             new_model = ObjectClassifier(NZ = False)
             new_model.fit(train_map, agreement[i], indcs)
             probs = new_model.predict_proba_segs(train_map)
+            #probs2 = new_model.predict_proba(train_map)
+            '''print self.emails[i]
+            pred = self.labels[best_labelers,train_map.unique_segs(20).shape[0]]
+            best_labelers = np.argmax(predictions, axis = 0)
+            plt.imshow(probs2, cmap = 'seismic', norm = plt.Normalize(0,1))
+            plt.show()'''
             predictions[i] = probs
             print predictions
         best_labelers = np.argmax(predictions, axis = 0)
         print best_labelers
         np.save('best.npy',best_labelers)
         assert(best_labelers.shape[0] == train_map.unique_segs(20).shape[0])
-        self.model_labels = self.labels[best_labelers,train_map.unique_segs(20).shape[0]]
+        self.model_labels = self.labels[best_labelers,train_map.unique_segs(20)]
+        np.save('vote.npy', self.model_labels)
 
     def model_vote(self, indcs):
         return self.model_labels[indcs]

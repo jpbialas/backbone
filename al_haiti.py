@@ -1,5 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 from object_model import ObjectClassifier
 import analyze_results
 import map_overlay

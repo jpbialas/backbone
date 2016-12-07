@@ -154,7 +154,7 @@ def main_haiti():
         FPRs.append(FPR)
         TPRs.append(TPR)
 
-    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
+    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)]*0)
     print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
     fig, _, _, _, _, _ = analyze_results.ROC(g_truth.ravel(), probs.ravel(), 'Classifier')
