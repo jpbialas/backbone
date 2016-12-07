@@ -56,7 +56,11 @@ class al:
             self.labelers.donmez_vote(seg_indices, .85, True)
             training_labels[train_indices] = i
         print np.where(training_labels>=0)
-        self.labelers.model_start(self.train_map, np.where(training_labels>=0))
+        if self.update_type == 'yan':
+            indcs = np.where(training_labels>-1)[0]
+            em = EM(self.train_map, self.labelers, self.train_map.unique_segs(self.seg)[indcs])
+            em.run()
+            self.labelers.model_start(self.train_map, np.where(training_labels>=0)[0],  em.G[:,1]>0.5)
         return training_labels
 
 
@@ -127,9 +131,6 @@ class al:
             new_labs = self.labelers.labels[labelers, train_segs[new_training]]
         elif self.update_type == "email":
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
-        elif self.update_type == "model":
-            assert('use yan instead')
-            new_labs = self.labelers.model_vote(self.train_map, new_training)
         elif self.update_type == "yan":
             new_labs = self.labelers.model_vote(new_training)
         elif self.update_type == 'xie':
@@ -182,7 +183,7 @@ class al:
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_2_{}_{}'.format(update, random, i), random = random == "random", update = update)
     next_al.run()
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+from labeler import Labelers
 import sklearn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,13 +18,15 @@ class EM():
         
 
 
-    def __init__(self, haiti_map, labels, indcs = None):
+    def __init__(self, haiti_map, labelers, indcs = None):
+        self.labelers = labelers
         self.haiti_map = haiti_map
         if indcs is None:
             relevant_labels = self.haiti_map.unique_segs(20)
         else:
             relevant_labels = indcs
-        labels = labels[:,relevant_labels] # (W, I)
+        probs = self.labelers.probability(label_indices = relevant_labels)
+        labels = self.labelers.labels[:,relevant_labels] # (W, I)
         self.I = labels.shape[1] #Number of segments
         self.W = labels.shape[0] #Number of Labelers
         self.K = 2
@@ -56,7 +59,7 @@ class EM():
         self.p = np.sum(self.G, axis = 0)/self.I
 
 
-    def run(self, runs = 15, v = 2):
+    def run(self, runs = 15, v = 1):
         converged = False
         count = 0
         while not converged and count < 50:
@@ -68,11 +71,13 @@ class EM():
         if v >1:
             self.show_probs()
             print self.p
+            for i in zip(self.labelers.emails, list(self.alpha)):
+                print i[0]
+                print i[1]
         
 
 if __name__ == '__main__':
-    from labeler import Labelers
     haiti_map = map_overlay.haiti_setup().sub_map(np.ix_(np.arange(4096/3, 4096), np.arange(4096)))
     labelers = Labelers()
-    test = EM(haiti_map, labelers.labels)
+    test = EM(haiti_map, labelers)
     test.run()

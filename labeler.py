@@ -141,22 +141,15 @@ class Labelers:
         self.q_labels[best_labelers,new_train_indcs] = best_labels
         return best_labels
 
-    def model_start(self, train_map, indcs):
+    def model_start(self, train_map, indcs, truth = None):
         predictions = np.zeros((self.labels.shape[0], train_map.unique_segs(20).shape[0]))
         agreement = (self.labels == self.majority_vote())[:,train_map.unique_segs(20)]
-        print self.majority_vote()[train_map.unique_segs(20)]
-        print self.labels[:,train_map.unique_segs(20)]
-        print agreement
+        if truth is not None:
+            agreement[:,indcs] = self.labels[:,train_map.unique_segs(20)[indcs]] == truth
         for i in range(self.labels.shape[0]):
             new_model = ObjectClassifier(NZ = False)
             new_model.fit(train_map, agreement[i], indcs)
             probs = new_model.predict_proba_segs(train_map)
-            #probs2 = new_model.predict_proba(train_map)
-            '''print self.emails[i]
-            pred = self.labels[best_labelers,train_map.unique_segs(20).shape[0]]
-            best_labelers = np.argmax(predictions, axis = 0)
-            plt.imshow(probs2, cmap = 'seismic', norm = plt.Normalize(0,1))
-            plt.show()'''
             predictions[i] = probs
             print predictions
         best_labelers = np.argmax(predictions, axis = 0)

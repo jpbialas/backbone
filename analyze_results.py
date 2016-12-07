@@ -132,7 +132,10 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95, prec = False):
     slope = (threshs[indx+1]-threshs[indx])/(TPRs[indx+1]-TPRs[indx])
     b = threshs[indx]-slope*TPRs[indx]
     thresh = slope*TPR + b
-    print thresh, FPRs[min_i]
+    slope2 = (FPRs[indx+1]-FPRs[indx])/(TPRs[indx+1]-TPRs[indx])
+    b2 = FPRs[indx]-slope2*TPRs[indx]
+    FPR = slope2*TPR + b2
+    print thresh, FPRs[min_i], FPR
     if prec:
         return metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
     else:
