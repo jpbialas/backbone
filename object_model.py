@@ -154,7 +154,7 @@ def main_haiti():
         FPRs.append(FPR)
         TPRs.append(TPR)
 
-    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)]*0)
+    probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)])
     print analyze_results.FPR_from_FNR(g_truth.ravel(), probs.ravel(), TPR = .95)
     analyze_results.probability_heat_map(test_map, probs.ravel(), '')
     fig, _, _, _, _, _ = analyze_results.ROC(g_truth.ravel(), probs.ravel(), 'Classifier')
@@ -175,34 +175,28 @@ def label_test():
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    for email in ['ab873@cornell.edu','ericaa@mtu.edu','cetorres@mtu.edu']:#labelers.emails[np.array([0,1,2,3,4,5,6,10,11,12, 16, 17])]:
-        print email
-        img = labelers.show_labeler(email, test_map)
-        fig = plt.figure(email)
-        fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-        y = (labelers.labeler(email) == labelers.majority_vote())
-        probs = model.fit_and_predict(train_map, test_map, y[train_map.unique_segs(20)], indcs = np.where(labelers.labeler(email)[train_map.unique_segs(20)]>=0))
-        plt.imshow(probs, cmap = 'seismic',  norm = plt.Normalize(0,1))
-        plt.title(email), plt.xticks([]), plt.yticks([])
-        plt.contour(labelers.majority_vote()[test_map.segmentations[20]], linewidths = .5, colors = 'green')
-        fig.savefig('label_predict/{}_predict.png'.format(email), format='png', dpi = 800)
-        #analyze_results.contour_map(img, probs<0.5, 'x<0.5')
-        #analyze_results.contour_map(img, (probs<0.6)-(probs<.4), '0.4<x<0.6')
-        #analyze_results.contour_map(img, (probs<0.25), 'x<.25')
-        #analyze_results.contour_map(img, (probs<0.6), 'x<0.6')
-        fig = analyze_results.ROC(y[test_map.segmentations[20]].ravel(), probs.ravel(), email)[0]
-        fig.savefig('label_predict/{}_ROC.png'.format(email), format='png', dpi = 600)
-    fig = plt.figure('img')
-    fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
-    plt.imshow(test_map.img)
-    plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-    plt.show()
+    predictions = np.zeros((labelers.labels.shape[0], train_map.unique_segs(20).shape[0]))
+    agreement = (labelers.labels == labelers.majority_vote())[:,train_map.unique_segs(20)]
+    for i in range(labelers.labels.shape[0]):
+        print labelers.emails[i]
+        new_model = ObjectClassifier(NZ = False)
+        new_model.fit(train_map, agreement[i])
+        probs = new_model.predict_proba_segs(test_map)
+        predictions[i] = probs
+        print predictions
+    best_labelers = np.argmax(predictions, axis = 0)
+    print best_labelers
+    np.save('predictions.npy', predictions)
+    np.save('best.npy',best_labelers)
+    assert(best_labelers.shape[0] == train_map.unique_segs(20).shape[0])
+    model_labels = labelers.labels[best_labelers,train_map.unique_segs(20)]
+    np.save('vote.npy', model_labels)
 
 
 
 
 if __name__ == '__main__':
-    main_haiti()
-    #label_test()
+    #main_haiti()
+    label_test()
 
 
