@@ -175,7 +175,7 @@ def label_test():
     haiti_map  = map_overlay.haiti_setup()
     train_map  = haiti_map.sub_map(train)
     test_map   = haiti_map.sub_map(test)
-    predictions = np.zeros((labelers.labels.shape[0], train_map.unique_segs(20).shape[0]))
+    predictions = np.zeros((labelers.labels.shape[0], test_map.unique_segs(20).shape[0]))
     agreement = (labelers.labels == labelers.majority_vote())[:,train_map.unique_segs(20)]
     for i in range(labelers.labels.shape[0]):
         print labelers.emails[i]
