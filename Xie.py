@@ -59,7 +59,7 @@ class EM():
         self.p = np.sum(self.G, axis = 0)/self.I
 
 
-    def run(self, runs = 15, v = 1):
+    def run(self, runs = 15, v = 2):
         converged = False
         count = 0
         while not converged and count < 50:

@@ -76,10 +76,10 @@ def tests(indcs = [0,1,2,3,4,5,6,7], k = 0):
     auc_lim = total_segs
     xaxes = xAxis()
 
-    graphs = [('object','', 'red', 100, 0, 'GEOBIA Building Noise (NNAR)'), ('object', '_random', 'red', 100, 0, 'GEOBIA Random Noise (NAR)'), ('object','_minimal', 'black', 100, 0, 'GEOBIA Building Noise With Fewer Features (NNAR)'), ('object', '_random_minimal', 'black', 100, 0, 'GEOBIA Random Noise With Fewer Features (NAR)')], \
-                [('px','', 'blue', 100, 1, 'Px-Based Building Noise (NNAR)'), ('px', '_random', 'blue', 100, 1, 'Px-Based Random Noise (NAR)'), ('px','_fewer', 'black', 100, 1, 'Px-Based Building Noise With Less Data (NNAR)'), ('px', '_random_fewer', 'black', 100, 1, 'Px-Based Random Noise With Less Data (NAR)')]
-    #graphs = [('object','', 'red', 100, 0, 'GEOBIA Building Noise (NNAR)'), ('object', '_random', 'red', 100, 0, 'GEOBIA Random Noise (NAR)'), ('px','', 'blue', 100, 1, 'Px-Based Building Noise (NNAR)'), ('px', '_random', 'blue', 100, 1, 'Px-Based Random Noise (NAR)')], [('object','_dilate', 'red', 50, 0, 'GEOBIA Sim. Geo. Noise (NNAR)'), ('object', '_random', 'red', 100, 0, 'GEOBIA Random Noise (NAR)'), ('px','_dilate', 'blue', 50, 1, 'Px-Based Sim. Geo. Noise (NNAR)'), ('px', '_random', 'blue', 100, 1, 'Px-Based Random Noise (NAR)')]
-    titles = 'Effect of Building Noise With Fewer Features', 'Effect of Building Noise With Less Data' 
+    graphs = [('object','', 'red', 100, 0, 'GEOBIA Building Noise (NNAR)'), ('object','_minimal', 'black', 100, 0, 'GEOBIA Building Noise With Fewer Features (NNAR)')], \
+                [('px','', 'blue', 100, 1, 'Px-Based Building Noise (NNAR)'),('px','_fewer', 'black', 100, 1, 'Px-Based Building Noise With Less Data (NNAR)')]
+    graphs = [('object','', 'red', 100, 0, 'GEOBIA Building Noise (NNAR)'), ('px','', 'blue', 100, 1, 'Px-Based Building Noise (NNAR)')], [('object','_dilate', 'red', 50, 0, 'GEOBIA Sim. Geo. Noise (NNAR)'), ('object', '_random', 'red', 100, 0, 'GEOBIA Random Noise (NAR)'), ('px','_dilate', 'blue', 50, 1, 'Px-Based Sim. Geo. Noise (NNAR)'), ('px', '_random', 'blue', 100, 1, 'Px-Based Random Noise (NAR)')]
+    titles = 'Effect of Building Noise', 'Effect of Building Noise With Less Data' 
     #all_methods = [('object','', 'red', 100, 0, 'GEOBIA Geospatial Noise'), ('object', '_random', 'red', 100, 0, 'GEOBIA Random Noise'), ('px','', 'blue', 100, 1, 'Px-Based Geospatial Noise'), ('px', '_random', 'blue', 100, 1, 'Px-Based Random Noise')]
     all_methods = graphs[k]
     title = titles[k]

@@ -9,9 +9,18 @@ import time
 
 
 def confusion_matrix(y_true, y_pred):
-    '''
-        Generates confusion_matrix faster than sklearn
-    '''
+    """
+    Generates confusion_matrix just like sklearn but faster
+    
+    Parameters
+    ----------
+    y_true : ndarray
+        1D array holding true labels 
+    y_pred : ndarray
+        1D array holding predicted labels
+        1D array holding predicted labels
+
+    """
     TPTN = y_true == y_pred
     TP = np.sum(np.logical_and(TPTN, y_true))
     TN = np.sum(TPTN) - TP
@@ -21,21 +30,19 @@ def confusion_matrix(y_true, y_pred):
     return np.array([[TN, FP],[FN, TP]])
 
 
-def draw_segment_analysis(my_map, labels):
-    pbar = custom_progress()
-    data = np.zeros((my_map.rows*my_map.cols), dtype = 'uint8')
-    segs = my_map.segmentation.ravel()
-    n_segs = int(np.max(segs))
-    for i in pbar(range(n_segs)):
-        data[np.where(segs == i)] = labels[i]
-    img = data.reshape(my_map.rows, my_map.cols)
-    plt.imshow(img, cmap = 'gray')
-    plt.show()
-
-    return img
-
-
 def confusion_analytics(y_true, y_pred):
+    """
+    Returns FPR and TPR
+    
+    Parameters
+    ----------
+    y_true : ndarray
+        1D array holding true labels 
+    y_pred : ndarray
+        1D array holding predicted labels
+        1D array holding predicted labels
+
+    """
     TPTN = y_true == y_pred
     TP = np.sum(np.logical_and(TPTN, y_true))
     TN = np.sum(TPTN) - TP
@@ -46,45 +53,8 @@ def confusion_analytics(y_true, y_pred):
     TPR = float(TP)/(TP+FN)
     return FPR, TPR
 
-
-
-def prec_recall(y_true, y_pred):
-    '''
-    INPUT:
-        - confusion_matrix: (2x2 ndarray) Confusion matrix of shape: (actual values) x (predicted values)
-    OUTPUT:
-        - (tuple) A Tuple containing the precision and recall of the confusion matrix
-
-    '''
-    conf = confusion_matrix(y_true, y_pred)
-    TP = conf[1,1]
-    FP = conf[0,1]
-    TN = conf[0,0]
-    FN = conf[1,0]
-    precision = metrics.precision_score(y_true, y_pred)
-    recall = metrics.recall_score(y_true, y_pred)
-    accuracy = metrics.accuracy_score(y_true, y_pred)
-    f1 = metrics.f1_score(y_true, y_pred)
-    FPR = FP/(FP+TN)
-    FNR = 1-recall
-    return round(precision, 5), round(recall, 5), round(accuracy, 5), round(f1, 5)
-
-def compare_heatmaps(pred1, pred2):
-    fig = plt.figure('Difference')
-
-    fig.subplots_adjust(bottom=0.05, left = 0.02, right = 0.98, top = 1, wspace = 0.02, hspace = 0)
-    plt.subplot2grid((2,2),(0,0)),plt.imshow(pred2, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.title('Bad Labelling'), plt.xticks([]), plt.yticks([])
-
-    plt.subplot2grid((2,2),(0,1)),plt.imshow(pred1, cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.title('Good Labelling'), plt.xticks([]), plt.yticks([])
-
-    diff = pred1-pred2
-    plt.subplot2grid((2,2),(1,0), colspan = 2),plt.imshow(diff, cmap = 'seismic', norm = plt.Normalize(-1,1))
-    plt.title('Difference'), plt.xticks([]), plt.yticks([])
-    
-
 def side_by_side(myMap, mask_true, mask_predict, name, save = False):
+    """Generates figure that displays side by side images myMap masked by mask_true and amsk_predict"""
     fig = plt.figure('SBS_{}'.format(name))
     fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     plt.subplot(121),plt.imshow(myMap.maskImg(mask_true))
@@ -96,6 +66,8 @@ def side_by_side(myMap, mask_true, mask_predict, name, save = False):
     return fig
 
 def probability_heat_map(map_test, full_predict, name, save = False):
+    """Produces heat map based on full_predict with true labels (stored as damage in map_test) 
+    labeled with green contours"""
     fig = plt.figure('HeatMap_{}'.format(name))
     fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     ground_truth = map_test.getLabels('damage')
@@ -107,6 +79,7 @@ def probability_heat_map(map_test, full_predict, name, save = False):
     return fig
 
 def contour_map(img, full_predict, title = 'Contour Map'):
+    """Produces figure of image wth full_predict shown as green contours over the image"""
     fig = plt.figure(title)
     fig.subplots_adjust(bottom=0, left = 0, right = 1, top = 1, wspace = 0, hspace = 0)
     plt.contour(full_predict, colors = 'green')
@@ -115,9 +88,33 @@ def contour_map(img, full_predict, title = 'Contour Map'):
 
 
 def FPR_from_FNR(ground_truth, full_predict, TPR = .95, prec = False):
+    """
+    Produces FPR at when TPR is [TPR]. If there is no threshold that produces this exact result,
+    use linear interpolation between the two closest thresholds. 
+    
+    Parameters
+    ----------
+    ground_truth : ndarray
+        1D array holding true labels 
+    full_predict : ndarray
+        1D array holding probabilities that each index is a 1
+    TPR : float
+        Recall to find FPR at
+    prec : boolean
+        If True, returns precision at that TPR instead of FPR
+
+    Returns
+    -------
+    float
+        FPR (or precision if prec == True) at set TRP
+    float
+        threshold that produces said FPR
+
+    """
     FPRs, TPRs, threshs = roc_curve(ground_truth, full_predict.ravel())
     min_i = 0
     max_i = TPRs.shape[0]
+    #Binary search for threshold corresponding with TPR
     while max_i-min_i >= 1:
         test_i = np.floor((max_i+min_i)/2)
         test = TPRs[test_i]
@@ -128,6 +125,7 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95, prec = False):
             min_i = test_i + 1
         else:
             max_i = test_i
+    #Use linear interpolation to find threshold and FPR at what would be a .95 Recall
     indx = min_i
     slope = (threshs[indx+1]-threshs[indx])/(TPRs[indx+1]-TPRs[indx])
     b = threshs[indx]-slope*TPRs[indx]
@@ -139,11 +137,40 @@ def FPR_from_FNR(ground_truth, full_predict, TPR = .95, prec = False):
     if prec:
         return metrics.precision_score(ground_truth.ravel(), full_predict.ravel()>thresh)
     else:
-        return FPRs[min_i], thresh
+        return FPR, thresh
 
 
 
 def ROC(ground_truth, full_predict, name, save = False):
+    """
+    Produces FPR at when TPR is [TPR]. If there is no threshold that produces this exact result,
+    use linear interpolation between the two closest thresholds. 
+    
+    Parameters
+    ----------
+    ground_truth : ndarray
+        1D array holding true labels 
+    full_predict : ndarray
+        1D array holding probabilities that each index is a 1
+    name : String
+        name associated with ROC curve for unique saving
+    save : boolean
+        saves roc curve figure if save is True
+    
+    Returns
+    matplolib.figure
+        Figure holding ROC curve
+    float
+        Area under ROC curve
+    float
+        threshold leading to a point closest to (0,1)
+    float list
+        list of FPRs at each threshold
+    float list
+        list of TPRs at each threshold
+    float list
+        list of all thresholds
+    """
     FPRs, TPRs, threshs = roc_curve(ground_truth.ravel(), full_predict.ravel())
     opt_thresh = threshs[np.argmin(FPRs**2 + (1-TPRs)**2)]
 
@@ -160,29 +187,3 @@ def ROC(ground_truth, full_predict, name, save = False):
         np.save('Compare Methods/'+name+'.npy', (FPRs, TPRs, threshs))
     return fig, AUC, opt_thresh, FPRs, TPRs, threshs
 
-
-def feature_importance(model, labels, X):
-    '''
-    INPUT:
-        - model:  (sklearn model) Trained sklearn model
-
-    '''
-    importances = model.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in model.estimators_],
-                 axis=0)
-    indices = np.argsort(importances)[::-1]
-
-    # Print the feature ranking
-    print("Feature ranking:")
-
-    for f in range(X.shape[1]):
-        print("{}. feature {}: ({})".format(f + 1, labels[indices[f]], importances[indices[f]]))
-
-    # Plot the feature importances of the forest
-    plt.figure()
-    plt.title("Feature importances")
-    plt.bar(range(X.shape[1]), importances[indices],
-           color="r", yerr=std[indices], align="center")
-    plt.xticks(range(X.shape[1]), labels[indices])
-    plt.xlim([-1, X.shape[1]])
-    #plt.show()

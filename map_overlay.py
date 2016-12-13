@@ -72,7 +72,7 @@ def haiti_setup(segs = [50], base_seg = 20, label_name = "Jared"):
     return haiti_map
 
 
-class Px_Map:
+class Px_Map(object):
     """
     Px_Map Class holds map image with associated features, masks, and segmentations
 
@@ -201,20 +201,17 @@ class Px_Map:
         23 corresponds to segmentation index 8. etc
 
         seg_convert(seg, arr) will return the following array
-        [0, 0, 0, 18, 7, 0, 0, 0, 23, 101]
-
-        This allows users to better use the actual segmentation for indexing.
-        Therefore, seg_convert(seg, arr)[self.segmentations(seg)] in this example would return:
+        
         18 18 18  7   7   7
         18 18 18  7   7   7
         23 23 23 101 101 101
         23 23 23 101 101 101
         """
         uniques = self.unique_segs(seg)
-        assert(len(uniques)==arr.shape[0], \
-            'Shape Error: arr must be the same length as uniques: {} != {}'.format(len(uniques), len(arr)))
-        assert(seg in self.segmentations, \
-            'Key Error: seg must be a key for a segmentation: {}'.format(seg))
+        assert len(uniques)==arr.shape[0], \
+            'Shape Error: arr must be the same length as uniques: {} != {}'.format(len(uniques), len(arr))
+        assert seg in self.segmentations, \
+            'Key Error: seg must be a key for a segmentation: {}'.format(seg)
         all_segs = np.zeros(uniques[-1]+1)
         all_segs[uniques] = arr
         return all_segs[self.segmentations[seg]]
@@ -245,7 +242,8 @@ class Px_Map:
         opacity : float
             Opacity for mask overlay
 
-        Returns:
+        Returns
+        -------
             Image with mask overlayed according to pixel value in mask
         """
         h,w,c = img.shape
@@ -296,8 +294,8 @@ class Px_Map:
         Similar function as mask_segments, but indices to mask are indicated by index list instead
         of boolean mask.
         """
-        assert(seg in self.segmentations, \
-            'Key Error: seg must be a key for a segmentation: {}'.format(seg))
+        assert seg in self.segmentations, \
+            'Key Error: seg must be a key for a segmentation: {}'.format(seg)
         mask = np.in1d(self.segmentations[seg],indcs)
         return self.mask_helper(self.img, mask, opacity) if with_img else mask
 
@@ -321,8 +319,8 @@ class Px_Map:
 
     def newPxMask(self, mask, mask_name):
         """Adds boolean mask in shape of image to masks with associated name"""
-        assert(mask.shape == (self.rows, self.cols), \
-            "New Mask must be the same shape as the image: {} != {}".format(mask.shape, (self.rows, self.cols)))
+        assert mask.shape == (self.rows, self.cols), \
+            "New Mask must be the same shape as the image: {} != {}".format(mask.shape, (self.rows, self.cols)) 
         self.masks[mask_name] = mask.ravel()
 
 
@@ -339,10 +337,10 @@ class Px_Map:
         new_name : String
             New mask name
         """
-        assert(old1 in self.masks, \
-            'Key Error: old1 must be a key for a mask: {}'.format(old1))
-        assert(old2 in self.masks, \
-            'Key Error: old2 must be a key for a mask: {}'.format(old2))
+        assert old1 in self.masks, \
+            'Key Error: old1 must be a key for a mask: {}'.format(old1) 
+        assert old2 in self.masks, \
+            'Key Error: old2 must be a key for a mask: {}'.format(old2)
         old_mask1 = self.masks[old1]
         old_mask2 = self.masks[old2]
         del self.masks[old1]
@@ -357,9 +355,34 @@ class Px_Map:
 
 
 class Geo_Map(Px_Map):
-    '''
-    Note Geo_Map is not pickleable due to gdal elements. but Px_Map is
-    '''
+    """
+    Geo_Map Class is a subclass of Px_Map that includes lat/lon support. 
+    It is instantiated with Tiff files and shapefiles instead of numpy based counterparts
+
+    Note Geo_Map objects are not pickleable due to gdal elements. Px_Map objects are.
+
+    Parameters
+    ----------
+    map_fn : String
+        Path name to map file that will serve as base image. Should be a .tiff file
+
+    Additional Fields
+    ------
+    name : String
+        name of map_fn
+    map_ds : GDAL Dataste
+        Dataset corresponding to map file
+    originX : float
+        Latitude of map transform center
+    OriginY : float
+        Longitude of map transform center
+    pixelWidth : float
+        Width resolution of each pixel
+    pixelHeight : float
+        Height resolution of each pixel
+    map_fn : String
+        Path name to map file that will serve as base image. Should be a .tiff file
+    """ 
 
     def __init__(self, map_fn):
         self.name = map_fn[map_fn.rfind('/')+1: map_fn.find('.tif')]
@@ -378,13 +401,27 @@ class Geo_Map(Px_Map):
         self.cols, self.rows, self.bands = ds.RasterXSize, ds.RasterYSize, ds.RasterCount
 
 
-    def new_segmentation(self, shape_fn, level, mask_name = 'segments', save = True):
+    def new_segmentation(self, shape_fn, level, save = True):
+        """
+        Creates new index map segmentation (see segmentations in Px_Map) from shapefile.
+
+        If save is True, saves segmentation in procesed_segments folder
+
+        Parameters
+        ----------
+        shape_fn : String
+            Path to shapefile to import
+        level : int
+            Segmentation level as assigned in eCognition to save segmentation under
+        save : boolean
+            Saves rasterizationin processed_segments folder if True
+        """
         name = shape_fn[shape_fn.rfind('/')+1: shape_fn.find('.shp')]
         p = os.path.join('processed_segments', "{}.npy".format(name))
         if os.path.exists(p) and save:
             mask = np.load(p)
         else:
-            mask = self.rasterize_shp(shape_fn, mask_name)
+            mask = self.rasterize_shp(shape_fn, 'segments')
             if save:
                 np.save(p, mask)
         self.new_seg_raster(mask, level)
@@ -392,30 +429,32 @@ class Geo_Map(Px_Map):
     
 
     def latlonToPx(self, x, y):
-        '''
-        INPUT: 
-            - x: (float) Lattitude Coordinate
-            - y: (float) Longitude Coordinates
-        OUTPUT: 
-            Tuple containing x and y coordinates of point in image associated with lat/lon
-        '''
+        """Returns Latitude and Longitude tuple corresponding to input pixel coordinates"""
         xOffset = int((x - self.originX) / self.pixelWidth)
         yOffset = int((y - self.originY) / self.pixelHeight)
         return (xOffset, yOffset)
 
     
     def _projectShape(self, shape_fn, mask_name):
-        '''
-        PRVIATE METHOD
-        INPUT: 
-            -shape_fn:  (string) Shape filename to be reprojected
-            -mask_name: (string) Custom name to associate with newly projected shape file
-        OUTPUT: 
-            - (DataSource object) New Shapefile with coordinates relative to base map raster
+        """
+        Private method for repreojecting shapefile projection method into base_map's projection method.
 
-        NOTE: Second half of code heavily inspired by: https://pcjericks.github.io/py-gdalogr-cookbook/projection.html
+        This ensures the two are properly aligned.
 
-        '''
+        Parameters
+        ----------
+        shape_fn : String
+            Path to shapefile that needs to be reprojected
+        mask_name : String
+            Custom name to associate with newly projected shape file
+
+        Returns
+        -------
+        osgeo.ogr.DataSource
+            Datasource of new reprojected shapfile
+        osgeo.osr.SpatialReference
+            Spatial Reference that the shapefile was reprojected to
+        """
         driver = ogr.GetDriverByName('ESRI Shapefile')
         in_ds = driver.Open(shape_fn, 0) #Second parameter makes it read only. Other option is 1
         if in_ds is None:
@@ -426,11 +465,11 @@ class Geo_Map(Px_Map):
         targetSR.ImportFromWkt(self.map_ds.GetProjectionRef())
         coordTrans = osr.CoordinateTransformation(in_lyr.GetSpatialRef(), targetSR)
         outfile = 'cache\{}.shp'.format(mask_name)
+        #Create new datasource and layer to hold reprojected shapefile
         outDataSet = driver.CreateDataSource(outfile)
         outLayer = outDataSet.CreateLayer(mask_name, targetSR, geom_type=ogr.wkbMultiPolygon)
         inLayerDefn = in_lyr.GetLayerDefn()
         fid_fd = ogr.FieldDefn('FID', ogr.OFTReal)
-        print fid_fd.GetType()
         for i in range(0, inLayerDefn.GetFieldCount()):
             fieldDefn = inLayerDefn.GetFieldDefn(i)
             outLayer.CreateField(fieldDefn)
@@ -457,28 +496,50 @@ class Geo_Map(Px_Map):
             inFeature.Destroy()
             inFeature = in_lyr.GetNextFeature()
             indx+=1
+        print "IM HERE", type(outDataSet), type(targetSR)
         return outDataSet, targetSR
 
     def rasterize_shp(self, shape_fn, mask_name):
         '''
             Creates index raster in the shape of the base image from shapefile segmentation
         '''
+        """
+        Convert shapefile segmentation of image into a pixel-based map.
+
+        This is necessary to take eCognition segmentations and convert them into a useful form
+        
+        Parameters
+        ----------
+        shape_fn : String
+            Path to shapefile that needs to be reprojected
+
+        Returns
+        -------
+        ndarray
+            Rasterized pixel-map based segmentation
+        """
+        #First reprojects shapefile to be consistent with base-map's projection
         dataSource, targetSR =  self._projectShape(shape_fn, mask_name)
         layer = dataSource.GetLayer()
         lat_max, lat_min, lon_min, lon_max = layer.GetExtent()
+        #Determine all pixel-based attributes of shapefile based on the base-map's pixel projection
         maxx, miny = self.latlonToPx(lat_min,lon_max)
         minx, maxy = self.latlonToPx(lat_max,lon_min)
         nrows, ncols = min(maxy-miny, self.rows), min(maxx-minx, self.cols)
         minx, miny, maxx, maxy = max(0, minx), max(0, miny), min(maxx, self.cols), min(maxy, self.rows)
         xres = (lat_max-lat_min)/float(maxx-minx)
         yres = (lon_max-lon_min)/float(maxy-miny)
+        #generate geotransofrm and datasource based on pixel information
         geotransform =(lat_min,xres,0,lon_max,0, -yres)
         dst_ds = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 ,gdal.GDT_Int32)
         dst_ds.SetGeoTransform(geotransform)
-        padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) # in order to fill whole image
+        #Rasterize shapefil into dst_ds using pixel information
         gdal.RasterizeLayer(dst_ds, [1], layer, options = ['ATTRIBUTE=FID'])
+        padding = ((miny, self.rows - maxy),(self.cols-maxx,minx)) 
+        #Pad rasterization with reflection in case the shapefile's shape became slightly different than the map's during the projection
         mask = np.pad(dst_ds.GetRasterBand(1).ReadAsArray(), padding, mode = 'edge')
         mask = np.fliplr(mask)
+        #Destroy datasource to free memory
         dataSource.Destroy()
         return mask
 

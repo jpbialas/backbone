@@ -35,6 +35,17 @@ class Labelers:
             all_emails[self.user_map[i]] = i
         return all_emails
 
+    def print_stats(self):
+        image_count = np.array(self.image_count.values())
+        stats = np.sum(image_count, axis = 0)
+        double_labelers = np.sum(np.sum(image_count[:,1:], axis = 1)==2)
+        image_one_labelers = stats[1] - double_labelers
+        image_two_labelers = stats[2] - double_labelers
+        print '{} Unique Labelers'.format(double_labelers+image_one_labelers+image_two_labelers)
+        print '-------------------------------------'
+        print '+    {} Labelers labeled both images'.format(double_labelers)
+        print '+    {} Labelers only labeled image 1'.format(image_one_labelers)
+        print '+    {} Labelers only labeled image 2'.format(image_two_labelers)
 
 
     def _unique_emails(self, fn):
@@ -53,12 +64,13 @@ class Labelers:
                     self.image_count[email][img_num] = 1
                 if self.image_count[email][0] == self.min_labeled:
                     self.user_map[email] = len(self.user_map)
+                    np.sum(np.array(self.image_count.values()), axis = 0), len(self.image_count.values()), np.sum(np.sum(np.array(self.image_count.values())[:,1:], axis = 1)==2)
             #print self.image_count,np.array(self.image_count.values()), np.sum(1-np.array(self.image_count.values()), axis = 0)
 
 
 
     def basic_setup(self):
-        fn = 'damagelabels20/labels8.csv'
+        fn = 'damagelabels20/labels9.csv'
         indices = [np.arange(0,30354), np.arange(30354,67105),np.arange(67105, 97710)]
         self._unique_emails(fn)
         self.rewards = np.tile(np.array([1,1,2]), (len(self.user_map),1))
@@ -160,6 +172,7 @@ class Labelers:
             print predictions
         best_labelers = np.argmax(predictions, axis = 0)
         print best_labelers
+        np.save('predictions.npy', predictions)
         np.save('best.npy',best_labelers)
         assert(best_labelers.shape[0] == train_map.unique_segs(20).shape[0])
         self.model_labels = self.labels[best_labelers,train_map.unique_segs(20)]
@@ -224,7 +237,7 @@ class Labelers:
 
 
     def show_majority_vote(self, disp_map, level = 20):
-        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = .6)
+        img = disp_map.mask_segments(self.majority_vote(np.arange(self.n)), level, with_img = True, opacity = 1)
         self.show_img(img, 'Majority Vote')
         return img
 
@@ -238,7 +251,7 @@ class Labelers:
 
 
     def show_labeler(self, email, disp_map, level = 20):
-        img = disp_map.mask_segments(self.labeler(email)>0, level, with_img = True, opacity = .4)[4096/3:, :]
+        img = disp_map.mask_segments(self.labeler(email)>0, level, with_img = True, opacity = .4)
         self.show_img(img, email)
         return img
 
@@ -279,55 +292,27 @@ class Labelers:
 
 
 def test():
-    '''label_list = Labelers(4, False)
-    label_list.add_labels('jared', np.array([0,0,1,0]))
-    print label_list.rewards
-    print 'UI', label_list.UI()
-    print label_list.emails
-    print label_list.donmez_vote(np.array([0,1,2,3]), .5, True)
-    print label_list.rewards
-    print label_list.UI()
-    label_list.clear_rewards()
-    print label_list.UI()
-    label_list.add_labels('joe', np.array([0,1,1,0]))
-    label_list.add_labels('luke', np.array([0,0,0,0]))
-    print label_list.donmez_vote(np.arange(3), .5, True) == np.array([0,0,1])
-    print label_list.UI()'''
-
+    
     haiti_map = map_overlay.haiti_setup()
     labelers = Labelers()
-    print labelers.emails
-    labelers.show_FPR_TPR()
+    labelers.print_stats()
+    l = []
+    for i,j in zip(labelers.image_count.keys(), np.array(labelers.image_count.values())[:,0]):
+        l.append([i,j])
+        print i,j
+    np.savetxt('all_emails.csv', np.array(l), delimiter = ',', fmt = '%s')
     #labelers.show_labeler('kmkobosk@mtu.edu', haiti_map)
-    #labelers.show_labeler('masexaue@mtu.edu', haiti_map)
-    #labelers.show_labeler('cetorres@mtu.edu', haiti_map)
-    labelers.show_majority_vote(haiti_map)
-    labelers.show_prob_vote(haiti_map)
-    plt.figure()
-    indcs = np.ix_(np.arange(4096/3, 4096), np.arange(4096))
-    probs = labelers.probability()[haiti_map.segmentations[20]][np.ix_(np.arange(4096/3, 4096), np.arange(4096))]
-    plt.imshow(probs,cmap = 'seismic', norm = plt.Normalize(0,1))
-    plt.show()
-    #print labelers.emails
-    #print labelers.donmez_vote(np.arange(labelers.n), 0.5, False)
-    #print labelers.UI()
-    #labelers.donmez_vote(np.arange(labelers.n/3, labelers.n), 0.5, True)
-
-    #print zip(labelers.emails, labelers.UI())
-    '''labelers.donmez_vote(np.arange(labelers.n), 0.75, True)
-    print labelers.UI()
-    print labelers.rewards
-    haiti_map = map_overlay.haiti_setup()
-    labelers.show_majority_vote(haiti_map)
-    labelers.show_prob_vote(haiti_map)
-    labelers.show_labeler('jaredsfrank@gmail.com', haiti_map)
-    labelers.show_labeler('dk72mi@gmail.com', haiti_map)
-    labelers.get_FPR_TPR()
-    plt.show()'''
+    #labelers.show_labeler('xuelingl@mtu.edu', haiti_map)
+    #train     = np.ix_(np.arange(4096/3, 4096), np.arange(4096/2))
+    #train_map = haiti_map.sub_map(train)
+    #labelers.show_majority_vote(haiti_map)
+    #labelers.show_prob_vote(haiti_map)
+    #plt.figure()
    
 
 if __name__ == '__main__':
     test()
+    plt.show()
 
 
 

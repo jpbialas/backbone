@@ -125,7 +125,13 @@ class ObjectClassifier():
         plt.xlim([-1, len(self.feat_names)])
         
 
-
+def main_NZ():
+    model = ObjectClassifier()
+    map_2, map_3 = map_overlay.basic_setup()
+    labels = np.zeros(map_2.unique_segs(50).shape[0])
+    labels[np.loadtxt('damagelabels50/Jared-3-2.csv', delimiter = ',').astype('int')] = 1
+    probs = model.fit_and_predict(map_2, map_3, labels)
+    np.save('object_probs.npy', probs)
 
 def main_haiti():
     from Xie import EM
@@ -188,15 +194,16 @@ def label_test():
     print best_labelers
     np.save('predictions.npy', predictions)
     np.save('best.npy',best_labelers)
-    assert(best_labelers.shape[0] == train_map.unique_segs(20).shape[0])
-    model_labels = labelers.labels[best_labelers,train_map.unique_segs(20)]
+    assert(best_labelers.shape[0] == test_map.unique_segs(20).shape[0])
+    model_labels = labelers.labels[best_labelers,test_map.unique_segs(20)]
     np.save('vote.npy', model_labels)
 
 
 
 
+
 if __name__ == '__main__':
-    #main_haiti()
-    label_test()
+    main_haiti()
+    #label_test()
 
 
