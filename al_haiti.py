@@ -98,7 +98,7 @@ class al(object):
         self.TPR        = .95
         self.seg        = 20
         self.thresh     = .06
-        self.path       = 'al_8/'
+        self.path       = 'al_9/'
         self.fprs       = []
         self.UIs        = []
 
