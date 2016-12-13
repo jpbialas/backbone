@@ -12,7 +12,39 @@ import time
 
 
 
-class ObjectClassifier():
+class ObjectClassifier(object):
+    """
+    Random Forest based classifier for Px_Map Objects
+
+    Parameters
+    ----------
+    NZ : boolean
+        True if imagery to be processed is from new zeland imagery. False if from Haiti
+        This sets constants associated with these two datasets
+    verbose : int
+        1 causes code to print updates as the run progresses
+
+    Fields
+    ------
+    verbose : int
+        1 causes code to print updates as the run progresses
+    n_trees : int
+        Number of trees to use in the random forest classifier
+    base_seg : int
+        Px_Map segmentation level used for classification
+    segs : int
+        Px_Map segmentation levels used for contextual features
+    even : int
+        0 : training data will not be sampled with balanced classes
+        1 : training data will undersample the majority class to balance the classes
+        2 : training data will oversample the minority class to balance the classes
+    features : Px_Map -> int -> int lit -> ndarray
+        Takes Px_Map object, base_seg, and contextual segs and produces ndarray containing features
+    feat_names : String list
+        List containing names of all features used for classification
+    model : sklearn.ensemble.forest.RandomForestClassifier
+        RF model trained on training map
+    """
 
     def __init__(self, NZ = True, verbose = 1):
         self.verbose   = verbose
@@ -20,6 +52,7 @@ class ObjectClassifier():
 
 
     def NZ_constants(self):
+        """Sets field constants for NZ imagery"""
         self.n_trees   = 85 
         self.base_seg  = 50
         self.segs      = [100]
@@ -27,6 +60,7 @@ class ObjectClassifier():
         self.features  = sf.NZ_features 
 
     def haiti_constants(self):
+        """Sets field constants for Haiti imagery"""
         self.n_trees   = 200
         self.base_seg  = 20 
         self.segs      = [50]
@@ -35,6 +69,10 @@ class ObjectClassifier():
 
 
     def sample(self, y, EVEN, n_samples = -1):
+        """
+
+
+        """
         if EVEN>0:
             zeros = np.where(y==0)[0]
             ones = np.where(y==1)[0]
@@ -74,7 +112,7 @@ class ObjectClassifier():
         X = self.get_X(map_train)[indcs]
         y = labels[indcs]
         samples = self.sample(y, self.even)
-        self.model= RandomForestClassifier(n_estimators=self.n_trees, n_jobs = -1, verbose = self.verbose)#, class_weight = "balanced")
+        self.model= RandomForestClassifier(n_estimators=self.n_trees, n_jobs = -1, verbose = self.verbose)
         self.model.fit(X[samples], y[samples])
         v_print('ending fit', self.verbose)
     

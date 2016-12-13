@@ -23,7 +23,7 @@ class al(object):
         String added to the end of filenames when saving results. Important for being able to run multiple experiments at once without overwriting
     [random] : boolean
         New training data selected to be sampled is done so randomly if True, and based on the random forest probability if False
-    [update] : String
+    [update_method] : String
         Describes how to assign labels to new training data based on a number of methods
         Examples include: donmez, donmez1, majority, random, email, yan, xie
     [unique_email] : String
@@ -76,11 +76,11 @@ class al(object):
         Indices that have been labeled as damage have value 1
     """
 
-    def __init__(self, postfix = '', random = False, update = 'donmez', unique_email = None, show = False):
+    def __init__(self, postfix = '', random = False, update_method = 'donmez', unique_email = None, show = False):
         self.set_params()
         self.show            = show
         self.unique_email    = unique_email
-        self.update          = update
+        self.update_method   = update_method
         self.postfix         = postfix
         self.uncertainty     = self.rf_uncertainty if not random else self.random_uncertainty
         self.setup_map_split()
@@ -127,7 +127,7 @@ class al(object):
             self.labelers.donmez_vote(seg_indices, .85, True)
             training_labels[train_indices] = i
         #If using Yan labeling model, also train models for each labeler to learn performance
-        if self.update == 'yan':
+        if self.update_method == 'yan':
             indcs = np.where(training_labels>-1)[0]
             self.labelers.model_start(self.train_map, indcs)
         return training_labels
@@ -203,30 +203,30 @@ class al(object):
             self.train_map.unique_segs(self.seg)[new_training]
         """
         train_segs = self.train_map.unique_segs(self.seg)
-        if self.update == "donmez":
+        if self.update_method == "donmez":
             #Based on the donmez algorithm
             new_labs = self.labelers.donmez_vote(train_segs[new_training], .85, True)
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
-        elif self.update == "donmez_1":
+        elif self.update_method == "donmez_1":
             #Variant of the donmez algorithm in which the algorithm may only sample one labeler each time
             new_labs = self.labelers.donmez_pick_1(train_segs[new_training])
             self.UIs.append(self.labelers.UI())
             np.save('{}UIs{}.npy'.format(self.path, self.postfix), np.array(self.UIs))
-        elif self.update == "majority":
+        elif self.update_method == "majority":
             #Uses majority vote
             new_labs = self.labelers.majority_vote(train_segs[new_training])
-        elif self.update == "random":
+        elif self.update_method == "random":
             #Randomly selects a labeler for each data point
             labelers = np.random.randint(0, len(self.labelers.labels), len(new_training))
             new_labs = self.labelers.labels[labelers, train_segs[new_training]]
-        elif self.update == "email":
+        elif self.update_method == "email":
             #Uses labels that unique_email chose
             new_labs = self.labelers.labeler(self.unique_email)[train_segs[new_training]]
-        elif self.update == "yan":
+        elif self.update_method == "yan":
             #Uses the yan algorithm to pick new labels
             new_labs = self.labelers.model_vote(new_training)
-        elif self.update == 'xie':
+        elif self.update_method == 'xie':
             #Uses the xie algorithm to pick new labels
             indcs = np.concatenate((np.where(self.training_labels>-1)[0], new_training))
             em = EM(self.train_map, self.labelers, train_segs[indcs])
@@ -276,7 +276,7 @@ class al(object):
 
 def run_al(i, update, random):
     assert(random == 'random' or random == 'rf')
-    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update = update)
+    next_al = al(postfix = '_{}_{}_{}'.format(update, random, i), random = random == "random", update_method = update)
     next_al.run()
 
 if __name__ == '__main__':
